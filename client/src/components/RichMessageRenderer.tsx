@@ -56,14 +56,7 @@ export function RichMessageRenderer({ content, className = "" }: RichMessageRend
       ],
       ALLOWED_ATTR: [
         'class', 'style', 'data-math-id', 'href', 'target', 'rel'
-      ],
-      ALLOWED_STYLES: {
-        'color': [/^green$/, /^red$/, /^blue$/, /^orange$/, /^purple$/],
-        'background-color': [/^#[0-9a-fA-F]{3,6}$/, /^rgb\(/],
-        'font-weight': [/^bold$/, /^normal$/],
-        'font-style': [/^italic$/, /^normal$/],
-        'text-decoration': [/^underline$/, /^line-through$/]
-      }
+      ]
     });
 
     return {
@@ -79,7 +72,7 @@ export function RichMessageRenderer({ content, className = "" }: RichMessageRend
 
     // Render display math
     processedContent.displayMathMatches.forEach(({ latex, id }) => {
-      const mathElement = element.querySelector(`[data-math-id="${id}"]`);
+      const mathElement = element.querySelector(`[data-math-id="${id}"]`) as HTMLElement;
       if (mathElement) {
         try {
           katex.render(latex, mathElement, {
@@ -96,7 +89,7 @@ export function RichMessageRenderer({ content, className = "" }: RichMessageRend
 
     // Render inline math
     processedContent.inlineMathMatches.forEach(({ latex, id }) => {
-      const mathElement = element.querySelector(`[data-math-id="${id}"]`);
+      const mathElement = element.querySelector(`[data-math-id="${id}"]`) as HTMLElement;
       if (mathElement) {
         try {
           katex.render(latex, mathElement, {
