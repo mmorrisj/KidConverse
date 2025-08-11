@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { generateChatResponse, filterUserInput } from "./services/openai";
+import { generateChatResponse, generateChatResponseStream, filterUserInput } from "./services/openai";
 import { insertChatSchema, insertMessageSchema, insertUserSchema } from "@shared/schema";
 import { z } from "zod";
 import { 
@@ -267,9 +267,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.end();
     } catch (error) {
       console.error("Error processing message:", error);
-      res.status(500).json({ 
-        message: "I'm having trouble thinking right now. Please try asking your question again!" 
-      });
+      if (!res.headersSent) {
+        res.status(500).json({ 
+          message: "I'm having trouble thinking right now. Please try asking your question again!" 
+        });
+      }
     }
   });
 

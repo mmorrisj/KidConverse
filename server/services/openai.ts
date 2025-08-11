@@ -59,6 +59,63 @@ Always respond in a friendly, patient, and educational manner with rich formatti
   return prompt;
 }
 
+export async function generateChatResponseStream(
+  messages: ChatMessage[], 
+  user?: User, 
+  onChunk?: (chunk: string) => void
+): Promise<string> {
+  try {
+    // Add personalized safety system prompt
+    const systemMessage: ChatMessage = {
+      role: 'system',
+      content: createPersonalizedSystemPrompt(user)
+    };
+
+    // Filter and validate messages for safety
+    const safeMessages = messages.filter(msg => {
+      if (typeof msg.content === 'string') {
+        return msg.content && msg.content.trim().length > 0;
+      } else if (Array.isArray(msg.content)) {
+        return msg.content.length > 0;
+      }
+      return false;
+    });
+
+    const allMessages = [systemMessage, ...safeMessages];
+
+    const stream = await openai.chat.completions.create({
+      model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+      messages: allMessages as any,
+      max_tokens: 1000,
+      temperature: 0.7,
+      stream: true,
+    });
+
+    let fullResponse = '';
+    for await (const chunk of stream) {
+      const content = chunk.choices[0]?.delta?.content || '';
+      if (content) {
+        fullResponse += content;
+        if (onChunk) {
+          onChunk(content);
+        }
+      }
+    }
+
+    return fullResponse;
+  } catch (error: any) {
+    console.error("OpenAI API Error:", error);
+    const fallbackResponse = user ? 
+      `Hi ${user.name}! I'm having a little trouble thinking right now. Could you please try asking your question again? I'm here to help with your homework and learning!` :
+      "I'm having a little trouble thinking right now. Could you please try asking your question again? I'm here to help with your homework and learning!";
+    
+    if (onChunk) {
+      onChunk(fallbackResponse);
+    }
+    return fallbackResponse;
+  }
+}
+
 export async function generateChatResponse(messages: ChatMessage[], user?: User): Promise<string> {
   try {
     // Add personalized safety system prompt
@@ -98,49 +155,7 @@ export async function generateChatResponse(messages: ChatMessage[], user?: User)
   }
 }
 
-export async function generateChatResponseStream(
-  messages: ChatMessage[], 
-  user?: User, 
-  onChunk: (chunk: string) => void
-): Promise<void> {
-  try {
-    // Add personalized safety system prompt
-    const systemMessage: ChatMessage = {
-      role: 'system',
-      content: createPersonalizedSystemPrompt(user)
-    };
 
-    // Filter and validate messages for safety
-    const safeMessages = messages.filter(msg => {
-      if (typeof msg.content === 'string') {
-        return msg.content && msg.content.trim().length > 0;
-      } else if (Array.isArray(msg.content)) {
-        return msg.content.length > 0;
-      }
-      return false;
-    });
-
-    const stream = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [systemMessage, ...safeMessages] as any,
-      max_tokens: 1000,
-      temperature: 0.7,
-      presence_penalty: 0.1,
-      frequency_penalty: 0.1,
-      stream: true,
-    });
-
-    for await (const chunk of stream) {
-      const content = chunk.choices[0]?.delta?.content;
-      if (content) {
-        onChunk(content);
-      }
-    }
-  } catch (error) {
-    console.error("OpenAI API Error:", error);
-    onChunk("I'm having trouble thinking right now. Please try asking your question again!");
-  }
-}
 
 export function filterUserInput(input: string): { isValid: boolean; reason?: string } {
   const lowercaseInput = input.toLowerCase();
