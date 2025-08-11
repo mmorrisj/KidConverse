@@ -172,4 +172,134 @@
   .border-study-green {
     border-color: var(--study-green);
   }
+
+  /* Rich message content styles */
+  .rich-message-content h1,
+  .rich-message-content h2,
+  .rich-message-content h3,
+  .rich-message-content h4,
+  .rich-message-content h5,
+  .rich-message-content h6 {
+    margin: 1rem 0 0.5rem 0;
+    font-weight: 600;
+    color: #1f2937;
+  }
+
+  .rich-message-content h1 { font-size: 1.5rem; }
+  .rich-message-content h2 { font-size: 1.3rem; }
+  .rich-message-content h3 { font-size: 1.1rem; }
+
+  .rich-message-content p {
+    margin: 0.5rem 0;
+    line-height: 1.6;
+  }
+
+  .rich-message-content strong {
+    font-weight: 600;
+    color: #374151;
+  }
+
+  .rich-message-content em {
+    font-style: italic;
+    color: #4b5563;
+  }
+
+  .rich-message-content code {
+    background-color: #f3f4f6;
+    color: #d97706;
+    padding: 0.2rem 0.4rem;
+    border-radius: 0.25rem;
+    font-size: 0.875rem;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  }
+
+  .rich-message-content pre {
+    background-color: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    margin: 1rem 0;
+    overflow-x: auto;
+  }
+
+  .rich-message-content pre code {
+    background: none;
+    color: #374151;
+    padding: 0;
+  }
+
+  .rich-message-content ol,
+  .rich-message-content ul {
+    margin: 0.5rem 0;
+    padding-left: 1.5rem;
+  }
+
+  .rich-message-content li {
+    margin: 0.25rem 0;
+    line-height: 1.5;
+  }
+
+  .rich-message-content ol {
+    list-style-type: decimal;
+  }
+
+  .rich-message-content ul {
+    list-style-type: disc;
+  }
+
+  .rich-message-content blockquote {
+    border-left: 4px solid #e5e7eb;
+    padding-left: 1rem;
+    margin: 1rem 0;
+    color: #6b7280;
+    font-style: italic;
+  }
+
+  .rich-message-content a {
+    color: #2563eb;
+    text-decoration: underline;
+  }
+
+  .rich-message-content a:hover {
+    color: #1d4ed8;
+  }
+
+  /* Mathematical formulas */
+  .rich-message-content .katex {
+    font-size: 1.1em;
+  }
+
+  .rich-message-content .katex-display {
+    margin: 1rem 0;
+    text-align: center;
+  }
+
+  .rich-message-content .math-display {
+    margin: 1rem 0;
+    text-align: center;
+    overflow-x: auto;
+  }
+
+  .rich-message-content .math-inline {
+    display: inline;
+  }
+
+  /* Table styles */
+  .rich-message-content table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 1rem 0;
+  }
+
+  .rich-message-content th,
+  .rich-message-content td {
+    border: 1px solid #e5e7eb;
+    padding: 0.5rem;
+    text-align: left;
+  }
+
+  .rich-message-content th {
+    background-color: #f9fafb;
+    font-weight: 600;
+  }
 }

@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import type { Message, Chat } from "@shared/schema";
+import { RichMessageRenderer } from '../RichMessageRenderer';
 
 interface ChatMessagesProps {
   chatId: string | null;
@@ -115,9 +116,16 @@ export default function ChatMessages({ chatId }: ChatMessagesProps) {
                   />
                 </div>
               )}
-              <p className="text-gray-800 text-base leading-relaxed whitespace-pre-wrap">
-                {message.content}
-              </p>
+              {message.role === 'assistant' ? (
+                <RichMessageRenderer 
+                  content={message.content}
+                  className="text-gray-800 text-base leading-relaxed"
+                />
+              ) : (
+                <p className="text-gray-800 text-base leading-relaxed whitespace-pre-wrap">
+                  {message.content}
+                </p>
+              )}
             </div>
             <p className={`text-xs text-gray-500 mt-2 ${
               message.role === 'user' ? 'text-right' : ''
