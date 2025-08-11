@@ -54,6 +54,8 @@ The architecture includes user schema preparation but currently operates without
 - **Type Safety**: Comprehensive TypeScript configuration across client and server
 - **Code Organization**: Monorepo structure with shared types and schemas
 - **Build Process**: Separate client (Vite) and server (esbuild) build processes
+- **Docker Deployment**: Multi-stage Docker build optimized for ARM architecture (Raspberry Pi)
+- **Health Monitoring**: Built-in health check endpoint at `/health` for container orchestration
 
 # External Dependencies
 
@@ -89,3 +91,7 @@ The architecture includes user schema preparation but currently operates without
 - **ORM**: Drizzle ORM for type-safe database operations
 - **Schema Management**: Drizzle Kit for migrations and schema management
 - **Session Storage**: PostgreSQL-backed session management
+- **Deployment Options**: 
+  - Native Replit hosting with automatic scaling
+  - Docker containerization for self-hosting (Raspberry Pi optimized)
+  - Multi-stage builds with ARM architecture support
