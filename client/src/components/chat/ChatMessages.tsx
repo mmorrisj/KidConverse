@@ -31,13 +31,6 @@ export default function ChatMessages({
     scrollToBottom();
   }, [messages, streamingContent]);
 
-  
-
-    return () => {
-      eventSource.close();
-    };
-  }, [chatId, queryClient]);
-
   if (!chatId) {
     return (
       <div className="flex-1 overflow-y-auto p-6 flex items-center justify-center">
