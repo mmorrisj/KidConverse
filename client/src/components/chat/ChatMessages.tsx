@@ -1,5 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
-import { useEffect, useRef } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useRef, useState } from "react";
 import type { Message, Chat } from "@shared/schema";
 import { RichMessageRenderer } from '../RichMessageRenderer';
 
@@ -10,6 +10,9 @@ interface ChatMessagesProps {
 
 export default function ChatMessages({ chatId }: ChatMessagesProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const queryClient = useQueryClient();
+  const [streamingContent, setStreamingContent] = useState<string>('');
+  const [isStreaming, setIsStreaming] = useState<boolean>(false);
 
   const { data: messages = [], isLoading } = useQuery<Message[]>({
     queryKey: ['/api/chats', chatId, 'messages'],
@@ -22,7 +25,38 @@ export default function ChatMessages({ chatId }: ChatMessagesProps) {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, streamingContent]);
+
+  // Listen for streaming messages
+  useEffect(() => {
+    if (!chatId) return;
+
+    const eventSource = new EventSource(`/api/chats/${chatId}/stream`);
+    
+    eventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        
+        if (data.type === 'aiChunk') {
+          setStreamingContent(data.content);
+          setIsStreaming(true);
+        } else if (data.type === 'complete') {
+          setIsStreaming(false);
+          setStreamingContent('');
+          // Refresh messages
+          queryClient.invalidateQueries({
+            queryKey: ['/api/chats', chatId, 'messages']
+          });
+        }
+      } catch (e) {
+        console.error('Error parsing SSE data:', e);
+      }
+    };
+
+    return () => {
+      eventSource.close();
+    };
+  }, [chatId, queryClient]);
 
   if (!chatId) {
     return (
@@ -140,6 +174,27 @@ export default function ChatMessages({ chatId }: ChatMessagesProps) {
           </div>
         </div>
       ))}
+
+      {/* Streaming message */}
+      {isStreaming && streamingContent && (
+        <div className="flex items-start space-x-4">
+          <div className="w-10 h-10 bg-study-green rounded-full flex items-center justify-center flex-shrink-0">
+            <i className="fas fa-robot text-white"></i>
+          </div>
+          <div className="flex-1">
+            <div className="bg-ai-msg border border-green-200 rounded-2xl rounded-tl-md p-4 max-w-3xl">
+              <RichMessageRenderer 
+                content={streamingContent + '|'}
+                className="text-gray-800 text-base leading-relaxed"
+              />
+            </div>
+            <p className="text-xs text-gray-500 mt-2 flex items-center">
+              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse mr-2"></div>
+              StudyBuddy is typing...
+            </p>
+          </div>
+        </div>
+      )}
 
       <div ref={messagesEndRef} />
     </div>

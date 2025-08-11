@@ -145,7 +145,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Send a message and get AI response
+  // Send a message and get AI response (streaming)
   app.post("/api/chats/:chatId/messages", async (req, res) => {
     try {
       const { content, imageUrl } = req.body;
@@ -160,6 +160,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!filterResult.isValid) {
         return res.status(400).json({ message: filterResult.reason });
       }
+
+      // Set up Server-Sent Events
+      res.writeHead(200, {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Cache-Control'
+      });
 
       // Verify chat exists
       const chat = await storage.getChat(chatId);
@@ -216,13 +225,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
 
-      // Generate AI response with user personalization
-      const aiResponse = await generateChatResponse(conversationHistory, user);
+      // Send user message first
+      res.write(`data: ${JSON.stringify({ 
+        type: 'userMessage', 
+        message: userMessage 
+      })}\n\n`);
 
-      // Save AI message
+      // Generate AI response with streaming
+      let aiResponseContent = '';
+      await generateChatResponseStream(conversationHistory, user, (chunk: string) => {
+        aiResponseContent += chunk;
+        res.write(`data: ${JSON.stringify({ 
+          type: 'aiChunk', 
+          chunk: chunk,
+          content: aiResponseContent
+        })}\n\n`);
+      });
+
+      // Save complete AI message
       const aiMessage = await storage.createMessage({
         chatId,
-        content: aiResponse,
+        content: aiResponseContent,
         role: 'assistant'
       });
 
@@ -235,10 +258,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Update chat's updatedAt timestamp
       await storage.updateChat(chatId, { updatedAt: new Date() });
 
-      res.json({
-        userMessage,
-        aiMessage
-      });
+      // Send final message with complete data
+      res.write(`data: ${JSON.stringify({ 
+        type: 'complete', 
+        aiMessage: aiMessage
+      })}\n\n`);
+
+      res.end();
     } catch (error) {
       console.error("Error processing message:", error);
       res.status(500).json({ 

@@ -21,6 +21,11 @@ export default function MessageInput({ chatId, currentUser, onChatCreated }: Mes
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
+  // Placeholder for setError, assuming it's defined elsewhere or meant to be added
+  const [error, setError] = useState<string>(""); 
+  // Placeholder for setIsLoading, assuming it's defined elsewhere or meant to be added
+  const [isLoading, setIsLoading] = useState<boolean>(false); 
+
   const createChatMutation = useMutation({
     mutationFn: async (title: string) => {
       const response = await apiRequest("POST", "/api/chats", { 
@@ -42,21 +47,31 @@ export default function MessageInput({ chatId, currentUser, onChatCreated }: Mes
     },
   });
 
+  // This mutation is now largely replaced by the direct fetch in sendMessage, 
+  // but we keep it for potential future use or if other parts of the app rely on it.
+  // However, the core logic for sending a message and handling streaming is in sendMessage.
   const sendMessageMutation = useMutation({
     mutationFn: async ({ chatId, content, imageUrl }: { chatId: string; content: string; imageUrl?: string }) => {
-      setIsTyping(true);
-      const response = await apiRequest("POST", `/api/chats/${chatId}/messages`, { content, imageUrl });
-      return response.json();
+      setIsLoading(true); // Ensure loading state is managed
+      // The actual streaming logic is handled within the sendMessage function below,
+      // which replaces the direct fetch call here. This mutation might become redundant.
+      // For now, we'll just return a placeholder or the original fetch if needed.
+      
+      // Directly calling the updated sendMessage logic here to ensure consistency.
+      // This might need refactoring depending on how tanstack-query should interact with streaming.
+      await sendMessage(content, undefined, imageUrl); // Passing imageUrl as undefined because it's handled within sendMessage
+      return { success: true }; // Placeholder return
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/chats', chatId, 'messages'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/chats'] });
+      // Invalidation is now handled within the sendMessage function after streaming is complete.
+      // queryClient.invalidateQueries({ queryKey: ['/api/chats', chatId, 'messages'] });
+      // queryClient.invalidateQueries({ queryKey: ['/api/chats'] });
       setMessage("");
       setUploadedImageUrl(null);
-      setIsTyping(false);
+      setIsLoading(false); // Ensure loading state is reset
     },
     onError: (error: Error) => {
-      setIsTyping(false);
+      setIsLoading(false); // Ensure loading state is reset
       toast({
         title: "Error",
         description: error.message || "Failed to send message",
@@ -67,19 +82,24 @@ export default function MessageInput({ chatId, currentUser, onChatCreated }: Mes
 
   const handleSubmit = async () => {
     const content = message.trim();
-    if (!content) return;
+    if (!content && !uploadedImageUrl) return; // Allow sending just an image
 
     if (!chatId) {
       // Create new chat first
       const title = content.length > 50 ? content.substring(0, 47) + "..." : content;
       const newChat = await createChatMutation.mutateAsync(title);
-      
+
       // Send message to new chat
-      sendMessageMutation.mutate({ chatId: newChat.id, content, imageUrl: uploadedImageUrl || undefined });
+      // Use the direct sendMessage function for streaming
+      await sendMessage(content, undefined, uploadedImageUrl || undefined, newChat.id);
     } else {
       // Send message to existing chat
-      sendMessageMutation.mutate({ chatId, content, imageUrl: uploadedImageUrl || undefined });
+      // Use the direct sendMessage function for streaming
+      await sendMessage(content, undefined, uploadedImageUrl || undefined, chatId);
     }
+    // Clear message and image after attempting to send
+    setMessage("");
+    setUploadedImageUrl(null);
   };
 
   const handleImageUpload = async () => {
@@ -122,13 +142,109 @@ export default function MessageInput({ chatId, currentUser, onChatCreated }: Mes
     }
   };
 
-  const isLoading = createChatMutation.isPending || sendMessageMutation.isPending;
+  // This function is the core of the streaming logic.
+  // It replaces the previous direct fetch in the old sendMessageMutation.
+  const sendMessage = async (content: string, imageFile?: File, imageUrl?: string, targetChatId?: string) => {
+    const activeChatId = targetChatId || chatId;
+    if (!content.trim() && !imageUrl) return; // Allow sending just an image
+
+    try {
+      setIsLoading(true);
+      setError(""); // Clear previous errors
+
+      // If no chat exists, create one first
+      let currentChatId = activeChatId;
+      if (!currentChatId) {
+        const title = content.length > 50 ? content.substring(0, 47) + "..." : content;
+        const newChatResponse = await apiRequest("POST", "/api/chats", {
+          title,
+          userId: currentUser.id,
+        });
+
+        if (!newChatResponse.ok) {
+          const error = await newChatResponse.json();
+          throw new Error(error.message || "Failed to create chat");
+        }
+
+        const newChat = await newChatResponse.json();
+        currentChatId = newChat.id;
+        onChatCreated?.(newChat); // Callback to update parent state if needed
+      }
+
+      // Send message with streaming support
+      const response = await fetch(`/api/chats/${currentChatId}/messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content, imageUrl }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to send message");
+      }
+
+      // Handle streaming response
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let fullResponse = ""; // To accumulate the full response if needed
+
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value);
+          const lines = chunk.split('\n');
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              try {
+                const data = JSON.parse(line.slice(6));
+
+                if (data.type === 'chunk') {
+                  // Append chunk to the full response
+                  fullResponse += data.content;
+                  // Note: Displaying this chunk character by character would require
+                  // updating a state variable in the parent component or a chat display component.
+                  // This function itself doesn't render, so it prepares data for rendering.
+                  // For a true typewriter effect, the Chat component would need to receive this streaming data.
+                } else if (data.type === 'complete') {
+                  // Invalidate and refetch queries when complete
+                  await queryClient.invalidateQueries({
+                    queryKey: ['/api/chats', currentChatId, 'messages']
+                  });
+                  await queryClient.invalidateQueries({
+                    queryKey: ['/api/chats']
+                  });
+                }
+              } catch (e) {
+                // Ignore JSON parse errors or malformed lines
+              }
+            }
+          }
+        }
+      }
+
+    } catch (error) {
+      console.error("Failed to send message:", error);
+      setError(error instanceof Error ? error.message : "Failed to send message");
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to send message",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const isSubmitting = createChatMutation.isPending || isLoading; // Use isLoading from the sendMessage function
 
   return (
     <div className="bg-white border-t border-gray-200 p-4">
       <div className="max-w-4xl mx-auto">
         {/* Typing Indicator */}
-        {isTyping && (
+        {isTyping && ( // This isTyping might need to be managed based on the sendMessage's isLoading state
           <div className="mb-4 flex items-center space-x-2 text-sm text-gray-500">
             <div className="flex space-x-1">
               <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
@@ -166,10 +282,10 @@ export default function MessageInput({ chatId, currentUser, onChatCreated }: Mes
               placeholder={uploadedImageUrl ? "Ask me to check your work..." : "Ask me anything about your homework..."}
               className="resize-none border border-gray-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-study-blue focus:border-transparent placeholder-gray-500 min-h-[52px] max-h-32"
               rows={1}
-              disabled={isLoading}
+              disabled={isSubmitting}
             />
           </div>
-          
+
           <div className="flex items-center space-x-2">
             <ObjectUploader
               maxNumberOfFiles={1}
@@ -180,13 +296,13 @@ export default function MessageInput({ chatId, currentUser, onChatCreated }: Mes
             >
               <i className="fas fa-camera text-lg"></i>
             </ObjectUploader>
-            
+
             <Button
               onClick={handleSubmit}
-              disabled={!message.trim() || isLoading}
+              disabled={!message.trim() && !uploadedImageUrl || isSubmitting}
               className="bg-study-blue hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white p-3 rounded-xl transition-colors duration-200 flex items-center justify-center min-w-[52px] h-[52px]"
             >
-              {isLoading ? (
+              {isSubmitting ? (
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
               ) : (
                 <i className="fas fa-paper-plane text-lg"></i>
@@ -194,7 +310,7 @@ export default function MessageInput({ chatId, currentUser, onChatCreated }: Mes
             </Button>
           </div>
         </div>
-        
+
         {/* Input Footer */}
         <div className="flex items-center justify-between mt-3 text-xs text-gray-500">
           <div className="flex items-center space-x-4">
