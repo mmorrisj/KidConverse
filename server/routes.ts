@@ -38,6 +38,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all users
+  app.get("/api/users", async (req, res) => {
+    try {
+      const users = await storage.getAllUsers();
+      res.json(users);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
   // Get user info
   app.get("/api/users/:id", async (req, res) => {
     try {
@@ -52,10 +63,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get all chats
+  // Get all chats for a user
   app.get("/api/chats", async (req, res) => {
     try {
-      const chats = await storage.getChats();
+      const userId = req.query.userId as string;
+      if (!userId) {
+        return res.status(400).json({ message: "userId is required" });
+      }
+      const chats = await storage.getChatsByUserId(userId);
       res.json(chats);
     } catch (error) {
       console.error("Error fetching chats:", error);

@@ -7,16 +7,22 @@ import type { Chat, User } from "@shared/schema";
 
 interface ChatPageProps {
   currentUser: User;
+  onLogout?: () => void;
 }
 
-export default function ChatPage({ currentUser }: ChatPageProps) {
+export default function ChatPage({ currentUser, onLogout }: ChatPageProps) {
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [streamingContent, setStreamingContent] = useState<string>('');
   const [isStreaming, setIsStreaming] = useState<boolean>(false);
 
   const { data: chats = [], refetch: refetchChats } = useQuery<Chat[]>({
-    queryKey: ['/api/chats'],
+    queryKey: ['/api/chats', currentUser.id],
+    queryFn: async () => {
+      const response = await fetch(`/api/chats?userId=${currentUser.id}`);
+      if (!response.ok) throw new Error('Failed to fetch chats');
+      return response.json();
+    },
   });
 
   const selectedChat = chats.find((chat) => chat.id === selectedChatId);
@@ -55,6 +61,8 @@ export default function ChatPage({ currentUser }: ChatPageProps) {
               selectedChatId={selectedChatId}
               onNewChat={handleNewChat}
               onSelectChat={handleSelectChat}
+              currentUser={currentUser}
+              onLogout={onLogout}
             />
           </div>
         </div>
@@ -67,6 +75,8 @@ export default function ChatPage({ currentUser }: ChatPageProps) {
           selectedChatId={selectedChatId}
           onNewChat={handleNewChat}
           onSelectChat={handleSelectChat}
+          currentUser={currentUser}
+          onLogout={onLogout}
         />
       </div>
 

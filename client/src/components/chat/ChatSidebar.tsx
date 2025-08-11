@@ -1,18 +1,24 @@
 import { Button } from "@/components/ui/button";
-import type { Chat } from "@shared/schema";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { LogOut, User } from "lucide-react";
+import type { Chat, User as UserType } from "@shared/schema";
 
 interface ChatSidebarProps {
   chats: Chat[];
   selectedChatId: string | null;
   onNewChat: () => void;
   onSelectChat: (chatId: string) => void;
+  currentUser?: UserType;
+  onLogout?: () => void;
 }
 
 export default function ChatSidebar({ 
   chats, 
   selectedChatId, 
   onNewChat, 
-  onSelectChat 
+  onSelectChat,
+  currentUser,
+  onLogout
 }: ChatSidebarProps) {
   const formatDate = (date: Date | string) => {
     const d = new Date(date);
@@ -107,6 +113,40 @@ export default function ChatSidebar({
           </div>
         </div>
       </div>
+
+      {/* User Profile Footer */}
+      {currentUser && (
+        <div className="p-4 border-t border-gray-200">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <Avatar className="w-8 h-8">
+                <AvatarFallback className="bg-study-blue text-white text-sm">
+                  {currentUser.name.charAt(0).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-gray-900 truncate">
+                  {currentUser.name}
+                </p>
+                <p className="text-xs text-gray-500">
+                  Grade {currentUser.grade}
+                </p>
+              </div>
+            </div>
+            {onLogout && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onLogout}
+                className="text-gray-500 hover:text-red-600"
+                title="Switch User"
+              >
+                <LogOut className="w-4 h-4" />
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

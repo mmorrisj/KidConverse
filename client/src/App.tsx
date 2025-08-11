@@ -7,11 +7,13 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import ChatPage from "@/pages/chat";
 import Register from "@/pages/register";
 import NotFound from "@/pages/not-found";
+import { UserSelector } from "@/components/UserSelector";
 import type { User } from "@shared/schema";
 
 function Router() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [showRegister, setShowRegister] = useState(false);
 
   useEffect(() => {
     // Check for stored user on app start
@@ -36,9 +38,21 @@ function Router() {
     }
   }, []);
 
+  const handleUserSelect = (user: User) => {
+    setCurrentUser(user);
+    localStorage.setItem('studybuddy-user-id', user.id);
+  };
+
   const handleUserRegistered = (user: User) => {
     setCurrentUser(user);
     localStorage.setItem('studybuddy-user-id', user.id);
+    setShowRegister(false);
+  };
+
+  const handleLogout = () => {
+    setCurrentUser(null);
+    localStorage.removeItem('studybuddy-user-id');
+    setShowRegister(false);
   };
 
   if (isLoading) {
@@ -56,9 +70,17 @@ function Router() {
     <Switch>
       <Route path="/">
         {currentUser ? (
-          <ChatPage currentUser={currentUser} />
+          <ChatPage currentUser={currentUser} onLogout={handleLogout} />
+        ) : showRegister ? (
+          <Register 
+            onSuccess={handleUserRegistered} 
+            onBack={() => setShowRegister(false)}
+          />
         ) : (
-          <Register onSuccess={handleUserRegistered} />
+          <UserSelector 
+            onUserSelect={handleUserSelect}
+            onNewUser={() => setShowRegister(true)}
+          />
         )}
       </Route>
       <Route component={NotFound} />

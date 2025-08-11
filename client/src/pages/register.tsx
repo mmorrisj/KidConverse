@@ -12,9 +12,10 @@ import { apiRequest } from '@/lib/queryClient';
 
 interface RegisterProps {
   onSuccess: (user: any) => void;
+  onBack?: () => void;
 }
 
-export default function Register({ onSuccess }: RegisterProps) {
+export default function Register({ onSuccess, onBack }: RegisterProps) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -70,7 +71,16 @@ export default function Register({ onSuccess }: RegisterProps) {
   ];
 
   return (
-    <div className="min-h-screen bg-chat-bg flex items-center justify-center p-4">
+    <div className="min-h-screen bg-chat-bg flex items-center justify-center p-4 relative">
+      {onBack && (
+        <Button
+          variant="ghost"
+          onClick={onBack}
+          className="absolute top-4 left-4 text-gray-600 hover:text-study-blue"
+        >
+          ← Back to Users
+        </Button>
+      )}
       <div className="w-full max-w-md bg-white rounded-2xl shadow-lg p-8">
         <div className="text-center mb-8">
           <div className="w-16 h-16 bg-study-blue/10 rounded-full flex items-center justify-center mx-auto mb-4">
