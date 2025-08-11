@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { generateChatResponse, filterUserInput } from "./services/openai";
-import { insertChatSchema, insertMessageSchema } from "@shared/schema";
+import { insertChatSchema, insertMessageSchema, insertUserSchema } from "@shared/schema";
 import { z } from "zod";
 import { 
   ObjectStorageService,
@@ -10,6 +10,48 @@ import {
 } from "./objectStorage";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Health check
+  app.get("/health", (req, res) => {
+    res.json({ status: "ok", timestamp: new Date().toISOString() });
+  });
+
+  // User registration endpoint
+  app.post("/api/users/register", async (req, res) => {
+    try {
+      const userData = insertUserSchema.parse(req.body);
+      
+      // Check if user already exists
+      const existingUser = await storage.getUserByEmail(userData.email);
+      if (existingUser) {
+        return res.status(400).json({ 
+          message: "A user with this email already exists. Please use a different email." 
+        });
+      }
+
+      const user = await storage.createUser(userData);
+      res.json(user);
+    } catch (error: any) {
+      console.error("Registration error:", error);
+      res.status(400).json({ 
+        message: error.message || "Registration failed. Please check your information and try again." 
+      });
+    }
+  });
+
+  // Get user info
+  app.get("/api/users/:id", async (req, res) => {
+    try {
+      const user = await storage.getUser(req.params.id);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      res.json(user);
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
   // Get all chats
   app.get("/api/chats", async (req, res) => {
     try {
@@ -140,6 +182,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         imageUrl: processedImageUrl
       });
 
+      // Get user info for personalization
+      let user = undefined;
+      if (chat.userId) {
+        user = await storage.getUser(chat.userId);
+      }
+
       // Get conversation history
       const messages = await storage.getMessages(chatId);
       const conversationHistory = messages.map(msg => {
@@ -168,8 +216,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
 
-      // Generate AI response
-      const aiResponse = await generateChatResponse(conversationHistory);
+      // Generate AI response with user personalization
+      const aiResponse = await generateChatResponse(conversationHistory, user);
 
       // Save AI message
       const aiMessage = await storage.createMessage({

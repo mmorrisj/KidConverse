@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import type { User } from "@shared/schema";
 
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
 const openai = new OpenAI({ 
@@ -16,7 +17,27 @@ interface ChatMessage {
   }>;
 }
 
-const CHILD_SAFETY_SYSTEM_PROMPT = `You are StudyBuddy AI, a helpful and safe learning assistant designed specifically for children aged 12 and under. Your role is to:
+function createPersonalizedSystemPrompt(user?: User): string {
+  let prompt = `You are StudyBuddy AI, a helpful and safe learning assistant designed specifically for children aged 12 and under.`;
+  
+  if (user) {
+    prompt += `
+
+STUDENT INFO:
+- Student Name: ${user.name}
+- Age: ${user.age} years old
+- Grade Level: ${user.grade}${user.grade === 'K' ? ' (Kindergarten)' : user.grade.length === 1 ? ` Grade ${user.grade}` : ''}
+
+PERSONALIZATION:
+- Address the student by name (${user.name}) occasionally to make interactions more personal
+- Tailor explanations to ${user.age}-year-old understanding level
+- Match content difficulty to ${user.grade === 'K' ? 'Kindergarten' : `Grade ${user.grade}`} curriculum standards
+- Reference age-appropriate examples and concepts that ${user.name} can relate to`;
+  }
+
+  prompt += `
+
+Your role is to:
 
 1. SAFETY FIRST: Never provide harmful, inappropriate, or unsafe content. Always maintain a child-friendly tone.
 2. EDUCATIONAL FOCUS: Help with homework, learning concepts, and academic questions across all school subjects.
@@ -35,12 +56,15 @@ const CHILD_SAFETY_SYSTEM_PROMPT = `You are StudyBuddy AI, a helpful and safe le
 
 Always respond in a friendly, patient, and educational manner with rich formatting to make learning engaging.`;
 
-export async function generateChatResponse(messages: ChatMessage[]): Promise<string> {
+  return prompt;
+}
+
+export async function generateChatResponse(messages: ChatMessage[], user?: User): Promise<string> {
   try {
-    // Add safety system prompt
+    // Add personalized safety system prompt
     const systemMessage: ChatMessage = {
       role: 'system',
-      content: CHILD_SAFETY_SYSTEM_PROMPT
+      content: createPersonalizedSystemPrompt(user)
     };
 
     // Filter and validate messages for safety

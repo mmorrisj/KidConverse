@@ -2,6 +2,17 @@
 
 StudyBuddy AI is a child-safe educational chat application designed for students aged 12 and under. The platform provides a secure learning environment where children can ask homework questions and receive educational assistance through an AI-powered chat interface. The application emphasizes safety with built-in content filtering and focuses exclusively on educational content across all school subjects.
 
+## Key Features
+
+- **User Registration**: Collects student name, email, age, and grade for personalized AI responses
+- **Personalized AI Responses**: AI adapts language and content based on user's age and grade level
+- **Chat Interface**: Modern, child-friendly chat interface with message history
+- **Daily Email Summaries**: Automated daily email summaries of chat sessions sent to users
+- **Image Upload Support**: Students can upload images for homework help with multimodal AI
+- **Content Safety**: Built-in content filtering ensures educational focus
+- **Docker Deployment**: Optimized for Raspberry Pi ARM architecture deployment
+- **PostgreSQL Database**: Persistent storage for users, chats, and messages
+
 # User Preferences
 
 Preferred communication style: Simple, everyday language.
@@ -37,9 +48,12 @@ The server follows a **REST API** pattern built with **Express.js**:
   - Messages (id, chatId, content, role, timestamp)
 - **Migration System**: Drizzle Kit handles schema migrations and database management
 
-## Authentication and Authorization
+## User Management and Registration
 
-The architecture includes user schema preparation but currently operates without active authentication, allowing for easy testing and development. The system is designed to accommodate future authentication integration.
+- **User Registration System**: Complete registration flow collecting name, email, age, and grade
+- **Local Storage Authentication**: User sessions maintained via localStorage for seamless experience
+- **User-Specific Content**: Each user has personalized chat history and AI interactions
+- **Email Integration**: Users receive daily summaries of their learning sessions via email
 
 ## Safety and Content Filtering
 
@@ -76,12 +90,17 @@ The architecture includes user schema preparation but currently operates without
 ## AI Integration
 
 - **OpenAI API**: GPT-4o model for educational chat responses
+- **Personalized Responses**: AI adapts to user's age, grade, and name for tailored interactions
+- **Multimodal Support**: Image analysis capabilities for visual homework assistance
 - **Safety Features**: Custom system prompts and content filtering for child safety
+- **Educational Focus**: AI responses strictly limited to academic and homework assistance
 
 ## Development Tools
 
 - **Type Validation**: Zod for runtime type checking and schema validation
-- **Session Management**: connect-pg-simple for PostgreSQL session storage
+- **Email Service**: SendGrid integration for automated daily summary emails
+- **Object Storage**: File upload capabilities for image-based homework assistance
+- **Content Filtering**: Custom safety filters for child-appropriate content
 - **Date Handling**: date-fns for date manipulation and formatting
 - **Development Environment**: Replit-specific plugins for enhanced development experience
 
@@ -89,9 +108,21 @@ The architecture includes user schema preparation but currently operates without
 
 - **Primary Database**: PostgreSQL via Neon Database serverless platform
 - **ORM**: Drizzle ORM for type-safe database operations
+- **Schema Design**: Comprehensive user registration with age/grade fields
 - **Schema Management**: Drizzle Kit for migrations and schema management
-- **Session Storage**: PostgreSQL-backed session management
+- **Email Scheduling**: Daily automated email summaries at 8 PM
 - **Deployment Options**: 
   - Native Replit hosting with automatic scaling
   - Docker containerization for self-hosting (Raspberry Pi optimized)
   - Multi-stage builds with ARM architecture support
+  - Health check endpoints for container orchestration
+
+## Recent Updates (January 2025)
+
+- ✅ **Database Migration**: Successfully migrated from in-memory to PostgreSQL storage
+- ✅ **User Registration**: Complete registration system with age/grade collection
+- ✅ **AI Personalization**: Enhanced AI responses based on user demographics
+- ✅ **Email System**: Daily summary emails via SendGrid integration
+- ✅ **Docker Deployment**: ARM-optimized containers for Raspberry Pi deployment
+- ✅ **Content Safety**: Advanced filtering for child-appropriate interactions
+- ✅ **Image Upload**: Multimodal AI support for visual homework assistance

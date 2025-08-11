@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { startEmailScheduler } from "./services/scheduler";
 
 const app = express();
 app.use(express.json());
@@ -71,6 +72,15 @@ app.use((req, res, next) => {
     host: "0.0.0.0",
     reusePort: true,
   }, () => {
+    // Start email scheduler for daily summaries
+    startEmailScheduler();
+    
     log(`serving on port ${port}`);
+    log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    if (process.env.SENDGRID_API_KEY) {
+      log('Email service configured for daily summaries');
+    } else {
+      log('Email service not configured (SENDGRID_API_KEY missing)');
+    }
   });
 })();

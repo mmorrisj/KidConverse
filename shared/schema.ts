@@ -5,14 +5,17 @@ import { z } from "zod";
 
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
+  name: text("name").notNull(),
+  email: text("email").notNull().unique(),
+  age: integer("age").notNull(),
+  grade: text("grade").notNull(),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
 });
 
 export const chats = pgTable("chats", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   title: text("title").notNull(),
-  userId: varchar("user_id"),
+  userId: varchar("user_id").notNull(),
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
   updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
 });
@@ -26,9 +29,12 @@ export const messages = pgTable("messages", {
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
 });
 
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
+export const insertUserSchema = createInsertSchema(users).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  age: z.number().min(5).max(12),
+  grade: z.enum(["K", "1", "2", "3", "4", "5", "6", "7"]),
 });
 
 export const insertChatSchema = createInsertSchema(chats).omit({

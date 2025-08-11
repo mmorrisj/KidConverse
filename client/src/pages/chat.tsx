@@ -3,9 +3,13 @@ import { useQuery } from "@tanstack/react-query";
 import ChatSidebar from "../components/chat/ChatSidebar";
 import ChatMessages from "../components/chat/ChatMessages";
 import MessageInput from "../components/chat/MessageInput";
-import type { Chat } from "@shared/schema";
+import type { Chat, User } from "@shared/schema";
 
-export default function ChatPage() {
+interface ChatPageProps {
+  currentUser: User;
+}
+
+export default function ChatPage({ currentUser }: ChatPageProps) {
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
@@ -115,6 +119,7 @@ export default function ChatPage() {
         
         <MessageInput 
           chatId={selectedChatId}
+          currentUser={currentUser}
           onChatCreated={handleChatCreated}
         />
       </main>

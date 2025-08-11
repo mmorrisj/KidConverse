@@ -4,16 +4,17 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import type { Chat } from "@shared/schema";
+import type { Chat, User } from "@shared/schema";
 import { ObjectUploader } from "../ObjectUploader";
 import type { UploadResult } from "@uppy/core";
 
 interface MessageInputProps {
   chatId: string | null;
+  currentUser: User;
   onChatCreated?: (chat: Chat) => void;
 }
 
-export default function MessageInput({ chatId, onChatCreated }: MessageInputProps) {
+export default function MessageInput({ chatId, currentUser, onChatCreated }: MessageInputProps) {
   const [message, setMessage] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
@@ -22,7 +23,10 @@ export default function MessageInput({ chatId, onChatCreated }: MessageInputProp
 
   const createChatMutation = useMutation({
     mutationFn: async (title: string) => {
-      const response = await apiRequest("POST", "/api/chats", { title });
+      const response = await apiRequest("POST", "/api/chats", { 
+        title, 
+        userId: currentUser.id 
+      });
       return response.json();
     },
     onSuccess: (chat: Chat) => {
