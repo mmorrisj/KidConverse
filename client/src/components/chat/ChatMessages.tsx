@@ -6,13 +6,17 @@ import { RichMessageRenderer } from '../RichMessageRenderer';
 interface ChatMessagesProps {
   chatId: string | null;
   onChatCreated?: (chat: Chat) => void;
+  streamingContent?: string;
+  isStreaming?: boolean;
 }
 
-export default function ChatMessages({ chatId }: ChatMessagesProps) {
+export default function ChatMessages({ 
+  chatId, 
+  streamingContent = '', 
+  isStreaming = false 
+}: ChatMessagesProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
-  const [streamingContent, setStreamingContent] = useState<string>('');
-  const [isStreaming, setIsStreaming] = useState<boolean>(false);
 
   const { data: messages = [], isLoading } = useQuery<Message[]>({
     queryKey: ['/api/chats', chatId, 'messages'],
@@ -27,31 +31,7 @@ export default function ChatMessages({ chatId }: ChatMessagesProps) {
     scrollToBottom();
   }, [messages, streamingContent]);
 
-  // Listen for streaming messages
-  useEffect(() => {
-    if (!chatId) return;
-
-    const eventSource = new EventSource(`/api/chats/${chatId}/stream`);
-    
-    eventSource.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        
-        if (data.type === 'aiChunk') {
-          setStreamingContent(data.content);
-          setIsStreaming(true);
-        } else if (data.type === 'complete') {
-          setIsStreaming(false);
-          setStreamingContent('');
-          // Refresh messages
-          queryClient.invalidateQueries({
-            queryKey: ['/api/chats', chatId, 'messages']
-          });
-        }
-      } catch (e) {
-        console.error('Error parsing SSE data:', e);
-      }
-    };
+  
 
     return () => {
       eventSource.close();

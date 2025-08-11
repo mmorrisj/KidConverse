@@ -12,6 +12,8 @@ interface ChatPageProps {
 export default function ChatPage({ currentUser }: ChatPageProps) {
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [streamingContent, setStreamingContent] = useState<string>('');
+  const [isStreaming, setIsStreaming] = useState<boolean>(false);
 
   const { data: chats = [], refetch: refetchChats } = useQuery<Chat[]>({
     queryKey: ['/api/chats'],
@@ -27,6 +29,8 @@ export default function ChatPage({ currentUser }: ChatPageProps) {
   const handleSelectChat = (chatId: string) => {
     setSelectedChatId(chatId);
     setIsSidebarOpen(false);
+    setIsStreaming(false);
+    setStreamingContent('');
   };
 
   const handleChatCreated = (chat: Chat) => {
@@ -115,12 +119,18 @@ export default function ChatPage({ currentUser }: ChatPageProps) {
         <ChatMessages 
           chatId={selectedChatId} 
           onChatCreated={handleChatCreated}
+          streamingContent={streamingContent}
+          isStreaming={isStreaming}
         />
         
         <MessageInput 
           chatId={selectedChatId}
           currentUser={currentUser}
           onChatCreated={handleChatCreated}
+          onStreamingUpdate={(content, streaming) => {
+            setStreamingContent(content);
+            setIsStreaming(streaming);
+          }}
         />
       </main>
     </div>

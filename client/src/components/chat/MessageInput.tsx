@@ -12,9 +12,10 @@ interface MessageInputProps {
   chatId: string | null;
   currentUser: User;
   onChatCreated?: (chat: Chat) => void;
+  onStreamingUpdate?: (content: string, isStreaming: boolean) => void; // Added callback for streaming updates
 }
 
-export default function MessageInput({ chatId, currentUser, onChatCreated }: MessageInputProps) {
+export default function MessageInput({ chatId, currentUser, onChatCreated, onStreamingUpdate }: MessageInputProps) {
   const [message, setMessage] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
@@ -22,15 +23,20 @@ export default function MessageInput({ chatId, currentUser, onChatCreated }: Mes
   const { toast } = useToast();
 
   // Placeholder for setError, assuming it's defined elsewhere or meant to be added
-  const [error, setError] = useState<string>(""); 
+  const [error, setError] = useState<string>("");
   // Placeholder for setIsLoading, assuming it's defined elsewhere or meant to be added
-  const [isLoading, setIsLoading] = useState<boolean>(false); 
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+
+  // State for handling file uploads within the input component
+  const [content, setContent] = useState<string>(""); // Renamed from 'message' for clarity in handleSubmit
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   const createChatMutation = useMutation({
     mutationFn: async (title: string) => {
-      const response = await apiRequest("POST", "/api/chats", { 
-        title, 
-        userId: currentUser.id 
+      const response = await apiRequest("POST", "/api/chats", {
+        title,
+        userId: currentUser.id
       });
       return response.json();
     },
@@ -47,7 +53,7 @@ export default function MessageInput({ chatId, currentUser, onChatCreated }: Mes
     },
   });
 
-  // This mutation is now largely replaced by the direct fetch in sendMessage, 
+  // This mutation is now largely replaced by the direct fetch in sendMessage,
   // but we keep it for potential future use or if other parts of the app rely on it.
   // However, the core logic for sending a message and handling streaming is in sendMessage.
   const sendMessageMutation = useMutation({
@@ -56,7 +62,7 @@ export default function MessageInput({ chatId, currentUser, onChatCreated }: Mes
       // The actual streaming logic is handled within the sendMessage function below,
       // which replaces the direct fetch call here. This mutation might become redundant.
       // For now, we'll just return a placeholder or the original fetch if needed.
-      
+
       // Directly calling the updated sendMessage logic here to ensure consistency.
       // This might need refactoring depending on how tanstack-query should interact with streaming.
       await sendMessage(content, undefined, imageUrl); // Passing imageUrl as undefined because it's handled within sendMessage
@@ -81,21 +87,21 @@ export default function MessageInput({ chatId, currentUser, onChatCreated }: Mes
   });
 
   const handleSubmit = async () => {
-    const content = message.trim();
-    if (!content && !uploadedImageUrl) return; // Allow sending just an image
+    const messageContent = content.trim();
+    if (!messageContent && !uploadedImageUrl) return; // Allow sending just an image
 
     if (!chatId) {
       // Create new chat first
-      const title = content.length > 50 ? content.substring(0, 47) + "..." : content;
+      const title = messageContent.length > 50 ? messageContent.substring(0, 47) + "..." : messageContent;
       const newChat = await createChatMutation.mutateAsync(title);
 
       // Send message to new chat
       // Use the direct sendMessage function for streaming
-      await sendMessage(content, undefined, uploadedImageUrl || undefined, newChat.id);
+      await sendMessage(messageContent, undefined, uploadedImageUrl || undefined, newChat.id);
     } else {
       // Send message to existing chat
       // Use the direct sendMessage function for streaming
-      await sendMessage(content, undefined, uploadedImageUrl || undefined, chatId);
+      await sendMessage(messageContent, undefined, uploadedImageUrl || undefined, chatId);
     }
     // Clear message and image after attempting to send
     setMessage("");
@@ -144,9 +150,9 @@ export default function MessageInput({ chatId, currentUser, onChatCreated }: Mes
 
   // This function is the core of the streaming logic.
   // It replaces the previous direct fetch in the old sendMessageMutation.
-  const sendMessage = async (content: string, imageFile?: File, imageUrl?: string, targetChatId?: string) => {
+  const sendMessage = async (messageContent: string, imageFile?: File, imageUrl?: string, targetChatId?: string) => {
     const activeChatId = targetChatId || chatId;
-    if (!content.trim() && !imageUrl) return; // Allow sending just an image
+    if (!messageContent.trim() && !imageUrl) return; // Allow sending just an image
 
     try {
       setIsLoading(true);
@@ -155,7 +161,7 @@ export default function MessageInput({ chatId, currentUser, onChatCreated }: Mes
       // If no chat exists, create one first
       let currentChatId = activeChatId;
       if (!currentChatId) {
-        const title = content.length > 50 ? content.substring(0, 47) + "..." : content;
+        const title = messageContent.length > 50 ? messageContent.substring(0, 47) + "..." : messageContent;
         const newChatResponse = await apiRequest("POST", "/api/chats", {
           title,
           userId: currentUser.id,
@@ -175,7 +181,7 @@ export default function MessageInput({ chatId, currentUser, onChatCreated }: Mes
       const response = await fetch(`/api/chats/${currentChatId}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content, imageUrl }),
+        body: JSON.stringify({ content: messageContent, imageUrl }),
       });
 
       if (!response.ok) {
@@ -186,9 +192,11 @@ export default function MessageInput({ chatId, currentUser, onChatCreated }: Mes
       // Handle streaming response
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
-      let fullResponse = ""; // To accumulate the full response if needed
 
       if (reader) {
+        onStreamingUpdate?.('', true); // Start streaming
+        let streamingContent = '';
+
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
@@ -201,14 +209,11 @@ export default function MessageInput({ chatId, currentUser, onChatCreated }: Mes
               try {
                 const data = JSON.parse(line.slice(6));
 
-                if (data.type === 'chunk') {
-                  // Append chunk to the full response
-                  fullResponse += data.content;
-                  // Note: Displaying this chunk character by character would require
-                  // updating a state variable in the parent component or a chat display component.
-                  // This function itself doesn't render, so it prepares data for rendering.
-                  // For a true typewriter effect, the Chat component would need to receive this streaming data.
+                if (data.type === 'aiChunk') {
+                  streamingContent += data.chunk;
+                  onStreamingUpdate?.(streamingContent, true);
                 } else if (data.type === 'complete') {
+                  onStreamingUpdate?.('', false); // End streaming
                   // Invalidate and refetch queries when complete
                   await queryClient.invalidateQueries({
                     queryKey: ['/api/chats', currentChatId, 'messages']
@@ -218,7 +223,7 @@ export default function MessageInput({ chatId, currentUser, onChatCreated }: Mes
                   });
                 }
               } catch (e) {
-                // Ignore JSON parse errors or malformed lines
+                console.error('Error parsing streaming data:', e);
               }
             }
           }
@@ -233,8 +238,14 @@ export default function MessageInput({ chatId, currentUser, onChatCreated }: Mes
         description: error instanceof Error ? error.message : "Failed to send message",
         variant: "destructive",
       });
+      onStreamingUpdate?.('', false); // Ensure streaming is marked as false on error
     } finally {
       setIsLoading(false);
+      // Clear form fields after a successful or failed send attempt
+      setContent("");
+      setImageFile(null);
+      setUploadedImageUrl(null); // Also clear the uploaded image URL
+      setImagePreview(null);
     }
   };
 
@@ -276,8 +287,8 @@ export default function MessageInput({ chatId, currentUser, onChatCreated }: Mes
         <div className="flex items-end space-x-4">
           <div className="flex-1">
             <Textarea
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
+              value={content} // Use 'content' state here
+              onChange={(e) => setContent(e.target.value)} // Update 'content' state
               onKeyPress={handleKeyPress}
               placeholder={uploadedImageUrl ? "Ask me to check your work..." : "Ask me anything about your homework..."}
               className="resize-none border border-gray-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-study-blue focus:border-transparent placeholder-gray-500 min-h-[52px] max-h-32"
@@ -299,7 +310,7 @@ export default function MessageInput({ chatId, currentUser, onChatCreated }: Mes
 
             <Button
               onClick={handleSubmit}
-              disabled={!message.trim() && !uploadedImageUrl || isSubmitting}
+              disabled={!content.trim() && !uploadedImageUrl || isSubmitting}
               className="bg-study-blue hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white p-3 rounded-xl transition-colors duration-200 flex items-center justify-center min-w-[52px] h-[52px]"
             >
               {isSubmitting ? (
