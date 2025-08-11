@@ -4,6 +4,10 @@ import { storage } from "./storage";
 import { generateChatResponse, filterUserInput } from "./services/openai";
 import { insertChatSchema, insertMessageSchema } from "@shared/schema";
 import { z } from "zod";
+import { 
+  ObjectStorageService,
+  ObjectNotFoundError,
+} from "./objectStorage";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Get all chats
@@ -72,10 +76,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get upload URL for object entity
+  app.post("/api/objects/upload", async (req, res) => {
+    try {
+      const objectStorageService = new ObjectStorageService();
+      const uploadURL = await objectStorageService.getObjectEntityUploadURL();
+      res.json({ uploadURL });
+    } catch (error) {
+      console.error("Error getting upload URL:", error);
+      res.status(500).json({ error: "Failed to get upload URL" });
+    }
+  });
+
+  // Serve objects
+  app.get("/objects/:objectPath(*)", async (req, res) => {
+    try {
+      const objectStorageService = new ObjectStorageService();
+      const objectFile = await objectStorageService.getObjectEntityFile(req.path);
+      objectStorageService.downloadObject(objectFile, res);
+    } catch (error) {
+      console.error("Error accessing object:", error);
+      if (error instanceof ObjectNotFoundError) {
+        return res.sendStatus(404);
+      }
+      return res.sendStatus(500);
+    }
+  });
+
   // Send a message and get AI response
   app.post("/api/chats/:chatId/messages", async (req, res) => {
     try {
-      const { content } = req.body;
+      const { content, imageUrl } = req.body;
       const chatId = req.params.chatId;
 
       if (!content || typeof content !== 'string') {
@@ -94,19 +125,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Chat not found" });
       }
 
+      // Process image URL if provided
+      let processedImageUrl = null;
+      if (imageUrl) {
+        const objectStorageService = new ObjectStorageService();
+        processedImageUrl = objectStorageService.normalizeObjectEntityPath(imageUrl);
+      }
+
       // Save user message
       const userMessage = await storage.createMessage({
         chatId,
         content: content.trim(),
-        role: 'user'
+        role: 'user',
+        imageUrl: processedImageUrl
       });
 
       // Get conversation history
       const messages = await storage.getMessages(chatId);
-      const conversationHistory = messages.map(msg => ({
-        role: msg.role as 'user' | 'assistant',
-        content: msg.content
-      }));
+      const conversationHistory = messages.map(msg => {
+        if (msg.imageUrl) {
+          // Create multimodal message for OpenAI
+          return {
+            role: msg.role as 'user' | 'assistant',
+            content: [
+              {
+                type: 'text' as const,
+                text: msg.content
+              },
+              {
+                type: 'image_url' as const,
+                image_url: {
+                  url: `${process.env.REPL_URL || 'http://localhost:5000'}${msg.imageUrl}`
+                }
+              }
+            ]
+          };
+        } else {
+          return {
+            role: msg.role as 'user' | 'assistant',
+            content: msg.content
+          };
+        }
+      });
 
       // Generate AI response
       const aiResponse = await generateChatResponse(conversationHistory);

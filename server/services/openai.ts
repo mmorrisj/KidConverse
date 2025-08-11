@@ -7,7 +7,13 @@ const openai = new OpenAI({
 
 interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
-  content: string;
+  content: string | Array<{
+    type: 'text' | 'image_url';
+    text?: string;
+    image_url?: {
+      url: string;
+    };
+  }>;
 }
 
 const CHILD_SAFETY_SYSTEM_PROMPT = `You are StudyBuddy AI, a helpful and safe learning assistant designed specifically for children aged 12 and under. Your role is to:
@@ -18,6 +24,7 @@ const CHILD_SAFETY_SYSTEM_PROMPT = `You are StudyBuddy AI, a helpful and safe le
 4. ENCOURAGING: Be positive, supportive, and encouraging. Celebrate learning progress.
 5. BOUNDARIES: Only help with educational content. Politely redirect if asked about non-educational topics.
 6. SAFETY FILTERING: If a question seems inappropriate or unsafe, politely explain that you can only help with schoolwork and learning.
+7. IMAGE ANALYSIS: When analyzing homework photos, focus on educational guidance. Check their work step-by-step, point out correct parts, gently correct mistakes, and provide helpful explanations to improve understanding.
 
 Always respond in a friendly, patient, and educational manner. Use emojis sparingly and appropriately to make learning fun.`;
 
@@ -30,13 +37,18 @@ export async function generateChatResponse(messages: ChatMessage[]): Promise<str
     };
 
     // Filter and validate messages for safety
-    const safeMessages = messages.filter(msg => 
-      msg.content && msg.content.trim().length > 0
-    );
+    const safeMessages = messages.filter(msg => {
+      if (typeof msg.content === 'string') {
+        return msg.content && msg.content.trim().length > 0;
+      } else if (Array.isArray(msg.content)) {
+        return msg.content.length > 0;
+      }
+      return false;
+    });
 
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
-      messages: [systemMessage, ...safeMessages],
+      messages: [systemMessage, ...safeMessages] as any,
       max_tokens: 1000,
       temperature: 0.7,
       presence_penalty: 0.1,

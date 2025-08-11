@@ -22,6 +22,7 @@ export const messages = pgTable("messages", {
   chatId: varchar("chat_id").notNull(),
   content: text("content").notNull(),
   role: text("role").notNull(), // 'user' or 'assistant'
+  imageUrl: text("image_url"), // Optional image URL for messages with photos
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
 });
 

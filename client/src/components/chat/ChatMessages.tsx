@@ -105,6 +105,16 @@ export default function ChatMessages({ chatId }: ChatMessagesProps) {
                 ? 'bg-user-msg border-blue-200 rounded-tr-md ml-auto'
                 : 'bg-ai-msg border-green-200 rounded-tl-md'
             }`}>
+              {message.imageUrl && (
+                <div className="mb-3">
+                  <img 
+                    src={`${window.location.origin}${message.imageUrl}`}
+                    alt="Homework photo"
+                    className="max-w-full h-auto rounded-lg border border-gray-200"
+                    style={{ maxHeight: '300px' }}
+                  />
+                </div>
+              )}
               <p className="text-gray-800 text-base leading-relaxed whitespace-pre-wrap">
                 {message.content}
               </p>
