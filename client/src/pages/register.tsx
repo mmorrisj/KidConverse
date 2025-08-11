@@ -30,10 +30,8 @@ export default function Register({ onSuccess }: RegisterProps) {
 
   const registerMutation = useMutation({
     mutationFn: async (userData: InsertUser) => {
-      return await apiRequest('/api/users/register', {
-        method: 'POST',
-        body: userData,
-      });
+      const response = await apiRequest('POST', '/api/users/register', userData);
+      return await response.json();
     },
     onSuccess: (user) => {
       toast({

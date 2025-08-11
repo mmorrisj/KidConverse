@@ -28,7 +28,7 @@ export function startEmailScheduler() {
           } else {
             errorCount++;
           }
-        } catch (error) {
+        } catch (error: any) {
           console.error(`Failed to send email to user ${user.name}:`, error);
           errorCount++;
         }
@@ -80,7 +80,7 @@ export async function triggerDailySummaries() {
     try {
       const success = await emailService.sendDailyChatSummary(user.id);
       results.push({ userId: user.id, success });
-    } catch (error) {
+    } catch (error: any) {
       results.push({ userId: user.id, success: false, error: error.message });
     }
   }

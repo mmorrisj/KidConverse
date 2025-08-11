@@ -126,3 +126,4 @@ The server follows a **REST API** pattern built with **Express.js**:
 - ✅ **Docker Deployment**: ARM-optimized containers for Raspberry Pi deployment
 - ✅ **Content Safety**: Advanced filtering for child-appropriate interactions
 - ✅ **Image Upload**: Multimodal AI support for visual homework assistance
+- ✅ **Registration Fix**: Resolved API endpoint routing issue for user registration
