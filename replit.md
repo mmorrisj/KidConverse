@@ -127,3 +127,8 @@ The server follows a **REST API** pattern built with **Express.js**:
 - ✅ **Content Safety**: Advanced filtering for child-appropriate interactions
 - ✅ **Image Upload**: Multimodal AI support for visual homework assistance
 - ✅ **Registration Fix**: Resolved API endpoint routing issue for user registration
+- ✅ **User Selection Interface**: Added user profile selection on app startup to avoid re-registration
+- ✅ **User-Specific Chats**: Implemented user-specific chat history with proper isolation
+- ✅ **Logout Functionality**: Added user switching capability with logout button
+- ✅ **Query Cache Management**: Fixed cache invalidation for seamless user selection updates
+- ✅ **Speech-to-Text Integration**: Added voice input functionality using Web Speech API for English transcription
