@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -7,6 +7,15 @@ import { apiRequest } from "@/lib/queryClient";
 import type { Chat, User } from "@shared/schema";
 import { ObjectUploader } from "../ObjectUploader";
 import type { UploadResult } from "@uppy/core";
+import { Mic, MicOff, Send, Upload } from "lucide-react";
+
+// Extend the Window interface to include speech recognition
+declare global {
+  interface Window {
+    SpeechRecognition: any;
+    webkitSpeechRecognition: any;
+  }
+}
 
 interface MessageInputProps {
   chatId: string | null;
@@ -22,6 +31,11 @@ export default function MessageInput({ chatId, currentUser, onChatCreated, onStr
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
+  // Speech recognition states
+  const [isListening, setIsListening] = useState(false);
+  const [speechSupported, setSpeechSupported] = useState(false);
+  const recognitionRef = useRef<any>(null);
+
   // Placeholder for setError, assuming it's defined elsewhere or meant to be added
   const [error, setError] = useState<string>("");
   // Placeholder for setIsLoading, assuming it's defined elsewhere or meant to be added
@@ -31,6 +45,71 @@ export default function MessageInput({ chatId, currentUser, onChatCreated, onStr
   const [content, setContent] = useState<string>(""); // Renamed from 'message' for clarity in handleSubmit
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+
+  // Initialize speech recognition
+  useEffect(() => {
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      setSpeechSupported(true);
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      recognitionRef.current = new SpeechRecognition();
+      
+      if (recognitionRef.current) {
+        recognitionRef.current.continuous = false;
+        recognitionRef.current.interimResults = false;
+        recognitionRef.current.lang = 'en-US';
+        
+        recognitionRef.current.onstart = () => {
+          setIsListening(true);
+        };
+        
+        recognitionRef.current.onresult = (event: any) => {
+          const transcript = event.results[0][0].transcript;
+          setMessage(prev => prev + (prev ? ' ' : '') + transcript);
+        };
+        
+        recognitionRef.current.onerror = (event: any) => {
+          console.error('Speech recognition error:', event.error);
+          setIsListening(false);
+          if (event.error !== 'aborted') {
+            toast({
+              title: "Voice input error",
+              description: "Could not recognize speech. Please try again.",
+              variant: "destructive",
+            });
+          }
+        };
+        
+        recognitionRef.current.onend = () => {
+          setIsListening(false);
+        };
+      }
+    }
+    
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.abort();
+      }
+    };
+  }, [toast]);
+
+  const toggleSpeechRecognition = () => {
+    if (!recognitionRef.current) return;
+    
+    if (isListening) {
+      recognitionRef.current.stop();
+    } else {
+      try {
+        recognitionRef.current.start();
+      } catch (error) {
+        console.error('Error starting speech recognition:', error);
+        toast({
+          title: "Voice input unavailable",
+          description: "Could not start voice input. Please type your question.",
+          variant: "destructive",
+        });
+      }
+    }
+  };
 
   const createChatMutation = useMutation({
     mutationFn: async (title: string) => {
@@ -87,7 +166,7 @@ export default function MessageInput({ chatId, currentUser, onChatCreated, onStr
   });
 
   const handleSubmit = async () => {
-    const messageContent = content.trim();
+    const messageContent = message.trim();
     if (!messageContent && !uploadedImageUrl) return; // Allow sending just an image
 
     if (!chatId) {
@@ -242,7 +321,7 @@ export default function MessageInput({ chatId, currentUser, onChatCreated, onStr
     } finally {
       setIsLoading(false);
       // Clear form fields after a successful or failed send attempt
-      setContent("");
+      setMessage("");
       setImageFile(null);
       setUploadedImageUrl(null); // Also clear the uploaded image URL
       setImagePreview(null);
@@ -287,10 +366,10 @@ export default function MessageInput({ chatId, currentUser, onChatCreated, onStr
         <div className="flex items-end space-x-4">
           <div className="flex-1">
             <Textarea
-              value={content} // Use 'content' state here
-              onChange={(e) => setContent(e.target.value)} // Update 'content' state
+              value={message} // Use 'message' state here
+              onChange={(e) => setMessage(e.target.value)} // Update 'message' state
               onKeyPress={handleKeyPress}
-              placeholder={uploadedImageUrl ? "Ask me to check your work..." : "Ask me anything about your homework..."}
+              placeholder={uploadedImageUrl ? "Ask me to check your work..." : isListening ? "Listening... Speak your question" : "Ask me anything about your homework..."}
               className="resize-none border border-gray-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-study-blue focus:border-transparent placeholder-gray-500 min-h-[52px] max-h-32"
               rows={1}
               disabled={isSubmitting}
@@ -298,6 +377,22 @@ export default function MessageInput({ chatId, currentUser, onChatCreated, onStr
           </div>
 
           <div className="flex items-center space-x-2">
+            {/* Voice Input Button */}
+            {speechSupported && (
+              <Button
+                onClick={toggleSpeechRecognition}
+                disabled={isSubmitting}
+                className={`p-3 rounded-xl transition-colors duration-200 flex items-center justify-center min-w-[52px] h-[52px] ${
+                  isListening 
+                    ? 'bg-red-500 hover:bg-red-600 text-white' 
+                    : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
+                }`}
+                title={isListening ? "Stop listening" : "Start voice input"}
+              >
+                {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+              </Button>
+            )}
+
             <ObjectUploader
               maxNumberOfFiles={1}
               maxFileSize={10485760}
@@ -310,13 +405,13 @@ export default function MessageInput({ chatId, currentUser, onChatCreated, onStr
 
             <Button
               onClick={handleSubmit}
-              disabled={!content.trim() && !uploadedImageUrl || isSubmitting}
+              disabled={!message.trim() && !uploadedImageUrl || isSubmitting}
               className="bg-study-blue hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white p-3 rounded-xl transition-colors duration-200 flex items-center justify-center min-w-[52px] h-[52px]"
             >
               {isSubmitting ? (
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
               ) : (
-                <i className="fas fa-paper-plane text-lg"></i>
+                <Send className="w-5 h-5" />
               )}
             </Button>
           </div>
@@ -333,6 +428,12 @@ export default function MessageInput({ chatId, currentUser, onChatCreated, onStr
               <i className="fas fa-graduation-cap text-study-blue"></i>
               <span>Educational Use Only</span>
             </div>
+            {speechSupported && (
+              <div className="flex items-center space-x-1">
+                <Mic className="w-3 h-3 text-study-blue" />
+                <span>Voice Input Available</span>
+              </div>
+            )}
           </div>
           <span>Press Enter to send, Shift+Enter for new line</span>
         </div>

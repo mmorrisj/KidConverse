@@ -47,12 +47,17 @@ function Router() {
     setCurrentUser(user);
     localStorage.setItem('studybuddy-user-id', user.id);
     setShowRegister(false);
+    // Invalidate the users query to refresh the list
+    queryClient.invalidateQueries({ queryKey: ['/api/users'] });
   };
 
   const handleLogout = () => {
     setCurrentUser(null);
     localStorage.removeItem('studybuddy-user-id');
     setShowRegister(false);
+    // Invalidate queries to refresh data
+    queryClient.invalidateQueries({ queryKey: ['/api/users'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/chats'] });
   };
 
   if (isLoading) {
