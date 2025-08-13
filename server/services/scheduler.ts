@@ -1,15 +1,15 @@
 import { storage } from '../storage';
-import { SendGridEmailService } from './email';
+import { GmailEmailService } from './email';
 
 // Simple scheduler that runs daily email summaries
 // In production, this could be replaced with a proper cron job
 export function startEmailScheduler() {
-  if (!process.env.SENDGRID_API_KEY) {
-    console.log('Email scheduler not started - SENDGRID_API_KEY not provided');
+  if (!process.env.GMAIL_USER || !process.env.GMAIL_PASSWORD) {
+    console.log('Email scheduler not started - Gmail credentials not provided');
     return;
   }
 
-  const emailService = new SendGridEmailService();
+  const emailService = new GmailEmailService();
   
   // Function to send daily summaries to all users
   const sendDailySummaries = async () => {
@@ -68,11 +68,11 @@ export function startEmailScheduler() {
 
 // Manual trigger for testing
 export async function triggerDailySummaries() {
-  if (!process.env.SENDGRID_API_KEY) {
-    throw new Error('SENDGRID_API_KEY not provided');
+  if (!process.env.GMAIL_USER || !process.env.GMAIL_PASSWORD) {
+    throw new Error('Gmail credentials not provided');
   }
   
-  const emailService = new SendGridEmailService();
+  const emailService = new GmailEmailService();
   const users = await storage.getAllUsers();
   
   const results = [];

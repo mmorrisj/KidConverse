@@ -2,36 +2,41 @@ import OpenAI from "openai";
 import type { User } from "@shared/schema";
 
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
-const openai = new OpenAI({ 
-  apiKey: process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY_ENV_VAR || "default_key"
+const openai = new OpenAI({
+  apiKey:
+    process.env.OPENAI_API_KEY ||
+    process.env.OPENAI_API_KEY_ENV_VAR ||
+    "default_key",
 });
 
 interface ChatMessage {
-  role: 'user' | 'assistant' | 'system';
-  content: string | Array<{
-    type: 'text' | 'image_url';
-    text?: string;
-    image_url?: {
-      url: string;
-    };
-  }>;
+  role: "user" | "assistant" | "system";
+  content:
+    | string
+    | Array<{
+        type: "text" | "image_url";
+        text?: string;
+        image_url?: {
+          url: string;
+        };
+      }>;
 }
 
 function createPersonalizedSystemPrompt(user?: User): string {
   let prompt = `You are StudyBuddy AI, a helpful and safe learning assistant designed specifically for children aged 12 and under.`;
-  
+
   if (user) {
     prompt += `
 
 STUDENT INFO:
 - Student Name: ${user.name}
 - Age: ${user.age} years old
-- Grade Level: ${user.grade}${user.grade === 'K' ? ' (Kindergarten)' : user.grade.length === 1 ? ` Grade ${user.grade}` : ''}
+- Grade Level: ${user.grade}${user.grade === "K" ? " (Kindergarten)" : user.grade.length === 1 ? ` Grade ${user.grade}` : ""}
 
 PERSONALIZATION:
 - Address the student by name (${user.name}) occasionally to make interactions more personal
 - Tailor explanations to ${user.age}-year-old understanding level
-- Match content difficulty to ${user.grade === 'K' ? 'Kindergarten' : `Grade ${user.grade}`} curriculum standards
+- Match content difficulty to ${user.grade === "K" ? "Kindergarten" : `Grade ${user.grade}`} curriculum standards
 - Reference age-appropriate examples and concepts that ${user.name} can relate to`;
   }
 
@@ -60,20 +65,20 @@ Always respond in a friendly, patient, and educational manner with rich formatti
 }
 
 export async function generateChatResponseStream(
-  messages: ChatMessage[], 
-  user?: User, 
-  onChunk?: (chunk: string) => void
+  messages: ChatMessage[],
+  user?: User,
+  onChunk?: (chunk: string) => void,
 ): Promise<string> {
   try {
     // Add personalized safety system prompt
     const systemMessage: ChatMessage = {
-      role: 'system',
-      content: createPersonalizedSystemPrompt(user)
+      role: "system",
+      content: createPersonalizedSystemPrompt(user),
     };
 
     // Filter and validate messages for safety
-    const safeMessages = messages.filter(msg => {
-      if (typeof msg.content === 'string') {
+    const safeMessages = messages.filter((msg) => {
+      if (typeof msg.content === "string") {
         return msg.content && msg.content.trim().length > 0;
       } else if (Array.isArray(msg.content)) {
         return msg.content.length > 0;
@@ -84,16 +89,16 @@ export async function generateChatResponseStream(
     const allMessages = [systemMessage, ...safeMessages];
 
     const stream = await openai.chat.completions.create({
-      model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+      model: "gpt-4.1-nano", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
       messages: allMessages as any,
       max_tokens: 1000,
       temperature: 0.7,
       stream: true,
     });
 
-    let fullResponse = '';
+    let fullResponse = "";
     for await (const chunk of stream) {
-      const content = chunk.choices[0]?.delta?.content || '';
+      const content = chunk.choices[0]?.delta?.content || "";
       if (content) {
         fullResponse += content;
         if (onChunk) {
@@ -105,10 +110,10 @@ export async function generateChatResponseStream(
     return fullResponse;
   } catch (error: any) {
     console.error("OpenAI API Error:", error);
-    const fallbackResponse = user ? 
-      `Hi ${user.name}! I'm having a little trouble thinking right now. Could you please try asking your question again? I'm here to help with your homework and learning!` :
-      "I'm having a little trouble thinking right now. Could you please try asking your question again? I'm here to help with your homework and learning!";
-    
+    const fallbackResponse = user
+      ? `Hi ${user.name}! I'm having a little trouble thinking right now. Could you please try asking your question again? I'm here to help with your homework and learning!`
+      : "I'm having a little trouble thinking right now. Could you please try asking your question again? I'm here to help with your homework and learning!";
+
     if (onChunk) {
       onChunk(fallbackResponse);
     }
@@ -116,17 +121,20 @@ export async function generateChatResponseStream(
   }
 }
 
-export async function generateChatResponse(messages: ChatMessage[], user?: User): Promise<string> {
+export async function generateChatResponse(
+  messages: ChatMessage[],
+  user?: User,
+): Promise<string> {
   try {
     // Add personalized safety system prompt
     const systemMessage: ChatMessage = {
-      role: 'system',
-      content: createPersonalizedSystemPrompt(user)
+      role: "system",
+      content: createPersonalizedSystemPrompt(user),
     };
 
     // Filter and validate messages for safety
-    const safeMessages = messages.filter(msg => {
-      if (typeof msg.content === 'string') {
+    const safeMessages = messages.filter((msg) => {
+      if (typeof msg.content === "string") {
         return msg.content && msg.content.trim().length > 0;
       } else if (Array.isArray(msg.content)) {
         return msg.content.length > 0;
@@ -151,15 +159,18 @@ export async function generateChatResponse(messages: ChatMessage[], user?: User)
     return content;
   } catch (error) {
     console.error("OpenAI API Error:", error);
-    throw new Error("I'm having trouble thinking right now. Please try asking your question again!");
+    throw new Error(
+      "I'm having trouble thinking right now. Please try asking your question again!",
+    );
   }
 }
 
-
-
-export function filterUserInput(input: string): { isValid: boolean; reason?: string } {
+export function filterUserInput(input: string): {
+  isValid: boolean;
+  reason?: string;
+} {
   const lowercaseInput = input.toLowerCase();
-  
+
   // Basic content filtering for child safety
   const inappropriatePatterns = [
     /\b(violence|violent|kill|death|die|hurt|pain)\b/i,
@@ -171,7 +182,8 @@ export function filterUserInput(input: string): { isValid: boolean; reason?: str
     if (pattern.test(lowercaseInput)) {
       return {
         isValid: false,
-        reason: "I can only help with schoolwork and learning questions. Let's talk about something educational instead!"
+        reason:
+          "I can only help with schoolwork and learning questions. Let's talk about something educational instead!",
       };
     }
   }
@@ -180,7 +192,8 @@ export function filterUserInput(input: string): { isValid: boolean; reason?: str
   if (input.trim().length < 3) {
     return {
       isValid: false,
-      reason: "Please ask me a complete question about your homework or something you'd like to learn!"
+      reason:
+        "Please ask me a complete question about your homework or something you'd like to learn!",
     };
   }
 
