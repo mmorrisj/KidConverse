@@ -1,4 +1,4 @@
-name: kidconverse  # <— pins the project name so volume names don't change
+version: "3.8"
 
 services:
   postgres:
@@ -8,7 +8,7 @@ services:
       POSTGRES_PASSWORD: "password"
       POSTGRES_DB: "studybuddy"
     ports:
-      - "5439:5432"  # host:container
+      - "5439:5432"  # host:container (optional, for host tools)
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -27,7 +27,7 @@ services:
     environment:
       NODE_ENV: "production"
       PORT: "5000"
-      PGHOST: "postgres"   # containers talk over the network by service name
+      PGHOST: "postgres"   # talk to DB by service name
       PGPORT: "5432"       # container port, not host-mapped 5439
       PGUSER: "user"
       PGPASSWORD: "password"
@@ -35,11 +35,10 @@ services:
       OPENAI_API_KEY: "${OPENAI_API_KEY}"
       ENABLE_WEBSOCKET: "false"
     depends_on:
-      postgres:
-        condition: service_healthy
+      - postgres
     restart: unless-stopped
 
 volumes:
   pgdata:
-    name: kidconverse_pgdata   # <— stable, won’t change with project/folder name
-
+    external: true
+    name: kidconverse_pgdata   # fixed name so data persists across rebuilds
