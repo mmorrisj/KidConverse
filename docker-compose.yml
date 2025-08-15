@@ -1,40 +1,37 @@
-version: '3.8'
-
 services:
   studybuddy:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     ports:
       - "5000:5000"
     environment:
-      - NODE_ENV=production
-      - DATABASE_URL=${DATABASE_URL}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - SENDGRID_API_KEY=${SENDGRID_API_KEY}
+      NODE_ENV: "production"
+      PORT: "5000"
+      PGHOST: "postgres"
+      PGPORT: "5432"
+      PGUSER: "user"
+      PGPASSWORD: "password"
+      PGDATABASE: "studybuddy"
+      OPENAI_API_KEY: "${OPENAI_API_KEY}" 
+      # Optional: stop dev WS/HTTPS calls to localhost:443
+      ENABLE_WEBSOCKET: "false"
+      # Or, if you actually use a WS/HTTP endpoint, set:
+      # ORIGIN: "http://studybuddy:5000"
+      # WS_URL: "ws://studybuddy:5000/v2"
     depends_on:
       - postgres
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
   postgres:
     image: postgres:15-alpine
     environment:
-      - POSTGRES_DB=studybuddy
-      - POSTGRES_USER=studybuddy
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-studybuddy123}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
+      POSTGRES_USER: "user"
+      POSTGRES_PASSWORD: "password"
+      POSTGRES_DB: "studybuddy"
     ports:
-      - "5432:5432"
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U studybuddy"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      - "5439:5432"  # host:container
+    volumes:
+      - pgdata:/var/lib/postgresql/data
 
 volumes:
-  postgres_data:
+  pgdata:
