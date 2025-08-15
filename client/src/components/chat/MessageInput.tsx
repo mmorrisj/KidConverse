@@ -331,7 +331,7 @@ export default function MessageInput({ chatId, currentUser, onChatCreated, onStr
   const isSubmitting = createChatMutation.isPending || isLoading; // Use isLoading from the sendMessage function
 
   return (
-    <div className="bg-white border-t border-gray-200 p-4">
+    <div className="bg-white border-t border-gray-200 p-4 sticky bottom-0 z-10 shadow-lg">
       <div className="max-w-4xl mx-auto">
         {/* Typing Indicator */}
         {isTyping && ( // This isTyping might need to be managed based on the sendMessage's isLoading state

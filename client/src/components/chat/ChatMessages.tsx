@@ -72,7 +72,7 @@ export default function ChatMessages({
   }
 
   return (
-    <div className="flex-1 overflow-y-auto p-6 space-y-6">
+    <div className="flex-1 overflow-y-auto p-6 space-y-6 scroll-smooth">
       {messages.length === 0 && (
         <div className="flex items-start space-x-4">
           <div className="w-10 h-10 bg-study-green rounded-full flex items-center justify-center flex-shrink-0">

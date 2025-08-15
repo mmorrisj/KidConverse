@@ -62,6 +62,40 @@
   --ai-msg: hsl(138 100% 96%);
 }
 
+/* iOS Safari viewport fixes for better mobile experience */
+@supports (-webkit-touch-callout: none) {
+  .h-screen {
+    height: -webkit-fill-available;
+  }
+  
+  .h-dvh {
+    height: -webkit-fill-available;
+  }
+}
+
+/* Prevent iOS zoom on input focus */
+input, textarea, select {
+  font-size: 16px !important;
+}
+
+/* Fix iOS keyboard behavior */
+html, body {
+  height: 100vh;
+  height: -webkit-fill-available;
+  overflow: hidden;
+}
+
+#root {
+  height: 100vh;
+  height: -webkit-fill-available;
+  overflow: hidden;
+}
+
+/* Improve touch scrolling on iOS */
+.overflow-y-auto {
+  -webkit-overflow-scrolling: touch;
+}
+
 /* Rich message content styling */
 .rich-message-content {
   line-height: 1.6;
