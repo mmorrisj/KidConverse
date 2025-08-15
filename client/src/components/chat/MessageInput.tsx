@@ -27,6 +27,7 @@ interface MessageInputProps {
 export default function MessageInput({ chatId, currentUser, onChatCreated, onStreamingUpdate }: MessageInputProps) {
   const [message, setMessage] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -64,7 +65,12 @@ export default function MessageInput({ chatId, currentUser, onChatCreated, onStr
         
         recognitionRef.current.onresult = (event: any) => {
           const transcript = event.results[0][0].transcript;
-          setMessage(prev => prev + (prev ? ' ' : '') + transcript);
+          setMessage(prev => {
+            const newMessage = prev + (prev ? ' ' : '') + transcript;
+            // Trigger auto-resize after state update
+            setTimeout(() => autoResizeTextarea(), 0);
+            return newMessage;
+          });
         };
         
         recognitionRef.current.onerror = (event: any) => {
@@ -91,6 +97,27 @@ export default function MessageInput({ chatId, currentUser, onChatCreated, onStr
       }
     };
   }, [toast]);
+
+  // Auto-resize textarea function
+  const autoResizeTextarea = () => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      textarea.style.height = 'auto';
+      const newHeight = Math.min(textarea.scrollHeight, 120); // Max height of ~3-4 lines
+      textarea.style.height = `${newHeight}px`;
+    }
+  };
+
+  // Handle message change with auto-resize
+  const handleMessageChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setMessage(e.target.value);
+    autoResizeTextarea();
+  };
+
+  // Auto-resize when message changes
+  useEffect(() => {
+    autoResizeTextarea();
+  }, [message]);
 
   const toggleSpeechRecognition = () => {
     if (!recognitionRef.current) return;
@@ -366,13 +393,16 @@ export default function MessageInput({ chatId, currentUser, onChatCreated, onStr
         <div className="flex items-end space-x-4">
           <div className="flex-1">
             <Textarea
-              value={message} // Use 'message' state here
-              onChange={(e) => setMessage(e.target.value)} // Update 'message' state
+              ref={textareaRef}
+              value={message}
+              onChange={handleMessageChange}
               onKeyPress={handleKeyPress}
               placeholder={uploadedImageUrl ? "Ask me to check your work..." : isListening ? "Listening... Speak your question" : "Ask me anything about your homework..."}
-              className="resize-none border border-gray-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-study-blue focus:border-transparent placeholder-gray-500 min-h-[52px] max-h-32"
+              className="resize-none border border-gray-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-study-blue focus:border-transparent placeholder-gray-500 min-h-[52px] max-h-[120px] overflow-y-auto transition-all duration-200"
               rows={1}
               disabled={isSubmitting}
+              style={{ height: '52px' }}
+              onInput={autoResizeTextarea}
             />
           </div>
 
