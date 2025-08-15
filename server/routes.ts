@@ -2,12 +2,18 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { generateChatResponse, generateChatResponseStream, filterUserInput } from "./services/openai";
+import OpenAI from "openai";
 import { insertChatSchema, insertMessageSchema, insertUserSchema } from "@shared/schema";
 import { z } from "zod";
 import { 
   ObjectStorageService,
   ObjectNotFoundError,
 } from "./objectStorage";
+
+// Initialize OpenAI
+const openai = process.env.OPENAI_API_KEY 
+  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  : null;
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Health check
@@ -287,6 +293,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: "I'm having trouble thinking right now. Please try asking your question again!" 
         });
       }
+    }
+  });
+
+  // Quiz generation endpoint
+  app.post("/api/quiz/generate", async (req, res) => {
+    try {
+      const quizRequestSchema = z.object({
+        topic: z.string(),
+        grade: z.string(),
+        age: z.number(),
+        name: z.string()
+      });
+
+      const { topic, grade, age, name } = quizRequestSchema.parse(req.body);
+      
+      if (!openai) {
+        return res.status(503).json({ message: "AI service not available" });
+      }
+
+      const gradeLevel = grade === "K" ? "Kindergarten" : `Grade ${grade}`;
+      
+      const systemPrompt = `You are StudyBuddy AI, a friendly educational assistant for children aged 12 and under. 
+
+Generate ONE engaging quiz question for ${name} (age ${age}, ${gradeLevel}) on the topic of ${topic}.
+
+REQUIREMENTS:
+- Make it appropriate for a ${gradeLevel} student
+- Include clear, simple instructions
+- Make it educational and fun
+- Use age-appropriate language
+- If it's multiple choice, provide 3-4 clear options
+- If it's open-ended, give helpful hints
+
+Format your response as a complete question that I can ask directly to the student. Be encouraging and use their name when appropriate.`;
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: `Generate a ${topic} quiz question for me!` }
+        ],
+        max_tokens: 300,
+        temperature: 0.7,
+      });
+
+      const question = completion.choices[0]?.message?.content || 
+        `Here's a ${topic} question for you, ${name}! What would you like to learn about ${topic} today?`;
+
+      res.json({ question });
+    } catch (error) {
+      console.error("Quiz generation error:", error);
+      res.status(500).json({ message: "Failed to generate quiz question" });
     }
   });
 

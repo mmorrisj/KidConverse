@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import type { Chat, User } from "@shared/schema";
 import { ObjectUploader } from "../ObjectUploader";
+import QuizSelector from "../QuizSelector";
 import type { UploadResult } from "@uppy/core";
 import { Mic, MicOff, Send, Upload } from "lucide-react";
 
@@ -245,6 +246,8 @@ export default function MessageInput({ chatId, currentUser, onChatCreated, onStr
 
   const removeImage = () => {
     setUploadedImageUrl(null);
+    setImageFile(null);
+    setImagePreview(null);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -355,6 +358,15 @@ export default function MessageInput({ chatId, currentUser, onChatCreated, onStr
     }
   };
 
+  const handleQuizSelect = (topic: string, question: string) => {
+    setMessage(question);
+    autoResizeTextarea();
+    // Auto-submit the quiz question
+    setTimeout(() => {
+      handleSubmit();
+    }, 100);
+  };
+
   const isSubmitting = createChatMutation.isPending || isLoading; // Use isLoading from the sendMessage function
 
   return (
@@ -422,6 +434,11 @@ export default function MessageInput({ chatId, currentUser, onChatCreated, onStr
                 {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
               </Button>
             )}
+
+            <QuizSelector 
+              currentUser={currentUser} 
+              onQuizSelect={handleQuizSelect}
+            />
 
             <ObjectUploader
               maxNumberOfFiles={1}
