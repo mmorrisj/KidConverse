@@ -1,0 +1,519 @@
+0) What you get
+
+/generate → creates an item (MCQ/FIB/CR) aligned to a SOL (stores JSON + metadata)
+
+/submit → auto-scores a user response (stores attempt + metrics)
+
+/mastery/{user_id} → simple mastery rollups per SOL/strand/grade
+
+Storage: SQLite (sol.db)
+
+Model: OpenAI (configurable). All items/evals are SOL-tagged (e.g., 7.NS.1.c).
+
+1) Replit setup
+
+Create a Python Repl.
+
+Add a Secret OPENAI_API_KEY with your key.
+
+Create files exactly as below, then press Run.
+
+2) Files to create
+requirements.txt
+fastapi
+uvicorn
+pydantic
+sqlalchemy
+pydantic-settings
+openai>=1.30.0
+python-multipart
+
+schemas/mcq.schema.json
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "MCQ",
+  "type": "object",
+  "required": ["id","sol_id","grade","strand","dok","difficulty","stem","choices","rationale"],
+  "properties": {
+    "id": {"type":"string"},
+    "sol_id": {"type":"string"},
+    "strand": {"type":"string"},
+    "grade": {"type":"integer"},
+    "dok": {"type":"integer","minimum":1,"maximum":4},
+    "difficulty": {"type":"string","enum":["easy","medium","hard"]},
+    "stem": {"type":"string"},
+    "choices": {
+      "type":"array","minItems":4,"maxItems":4,
+      "items": {
+        "type":"object",
+        "required":["id","text","is_correct"],
+        "properties":{
+          "id":{"type":"string"},
+          "text":{"type":"string"},
+          "is_correct":{"type":"boolean"}
+        }
+      }
+    },
+    "rationale":{"type":"object"},
+    "standards_tags":{"type":"array","items":{"type":"string"}},
+    "misconceptions":{"type":"array","items":{"type":"string"}},
+    "version":{"type":"integer"}
+  }
+}
+
+schemas/fib.schema.json
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "FIB",
+  "type": "object",
+  "required": ["id","sol_id","grade","stem","answer_key","dok","difficulty"],
+  "properties": {
+    "id": {"type":"string"},
+    "sol_id": {"type":"string"},
+    "grade": {"type":"integer"},
+    "stem": {"type":"string"},
+    "answer_key": {
+      "type":"object",
+      "required": ["expected"],
+      "properties": {
+        "expected":{"type":"string"},
+        "alt_equivalents":{"type":"array","items":{"type":"string"}},
+        "format":{"type":"string","enum":["rational_number","decimal","integer","expression","text"]}
+      }
+    },
+    "tolerance":{"type":["number","null"]},
+    "units":{"type":["string","null"]},
+    "dok":{"type":"integer","minimum":1,"maximum":4},
+    "difficulty":{"type":"string","enum":["easy","medium","hard"]},
+    "scoring":{"type":"object"},
+    "feedback":{"type":"object"}
+  }
+}
+
+schemas/cr.schema.json
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CR",
+  "type": "object",
+  "required": ["id","sol_id","grade","stem","rubric","dok","difficulty"],
+  "properties": {
+    "id":{"type":"string"},
+    "sol_id":{"type":"string"},
+    "grade":{"type":"integer"},
+    "stem":{"type":"string"},
+    "expected_ideas":{"type":"array","items":{"type":"string"}},
+    "rubric":{
+      "type":"array",
+      "items":{
+        "type":"object",
+        "required":["dimension","scale"],
+        "properties":{
+          "dimension":{"type":"string"},
+          "scale":{"type":"string"}
+        }
+      }
+    },
+    "dok":{"type":"integer","minimum":1,"maximum":4},
+    "difficulty":{"type":"string","enum":["easy","medium","hard"]}
+  }
+}
+
+app.py
+import json, os, uuid, math, re
+from datetime import datetime
+from typing import Optional, Literal, List, Dict, Any
+
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel, Field
+from pydantic_settings import BaseSettings
+from sqlalchemy import (create_engine, Column, Integer, String, Text, Float,
+                        DateTime, JSON as SAJSON)
+from sqlalchemy.orm import sessionmaker, declarative_base
+from openai import OpenAI
+
+# ----------------- Settings -----------------
+class Settings(BaseSettings):
+    OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
+    MODEL: str = "gpt-4o-mini"  # change as desired
+
+settings = Settings()
+client = OpenAI(api_key=settings.OPENAI_API_KEY)
+
+# ----------------- DB -----------------
+engine = create_engine("sqlite:///sol.db", future=True)
+SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+Base = declarative_base()
+
+class Item(Base):
+    __tablename__ = "items"
+    id = Column(String, primary_key=True)
+    sol_id = Column(String, index=True)
+    strand = Column(String)
+    grade = Column(Integer)
+    dok = Column(Integer)
+    difficulty = Column(String)
+    item_type = Column(String)  # MCQ|FIB|CR
+    payload = Column(Text)      # raw JSON item
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+class Attempt(Base):
+    __tablename__ = "attempts"
+    id = Column(String, primary_key=True)
+    user_id = Column(String, index=True)
+    item_id = Column(String, index=True)
+    sol_id = Column(String, index=True)
+    item_type = Column(String)
+    dok = Column(Integer)
+    difficulty = Column(String)
+    score = Column(Float)
+    max_score = Column(Float)
+    metrics = Column(Text)      # json
+    duration_seconds = Column(Float)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+Base.metadata.create_all(bind=engine)
+
+# ----------------- Schemas (Pydantic) -----------------
+class GenRequest(BaseModel):
+    item_type: Literal["MCQ","FIB","CR"]
+    sol_id: str
+    sol_text: str
+    grade: int
+    strand: str
+    difficulty: Literal["easy","medium","hard"] = "medium"
+    dok: int = Field(2, ge=1, le=4)
+    context: Optional[str] = "everyday numeracy"
+    n: int = 1
+
+class SubmitRequest(BaseModel):
+    user_id: str
+    item_id: str
+    user_response: Any
+    duration_seconds: Optional[float] = 0.0
+
+# ----------------- Prompt templates -----------------
+SYSTEM_PROMPT = """You are an assessment item writer aligned to the Virginia Standards of Learning.
+- Always tag each item with its SOL identifier.
+- Match grade-appropriate vocabulary and DOK.
+- MCQ: 4 options (A–D), one correct, include rationales and misconceptions.
+- FIB: include answer_key, alt_equivalents if sensible; respect numeric formats.
+- CR: include analytic rubric with 3–4 dimensions; 0–2 or 0–4 scales.
+Return ONLY valid JSON per schema; no extra commentary."""
+
+MCQ_USER_TMPL = """
+Generate {n} MCQ items.
+SOL: {sol_id} — "{sol_text}"
+Grade {grade} | Strand {strand} | Difficulty {difficulty} | DOK {dok}
+Context preference: {context}
+
+JSON fields: id (uuid), sol_id, strand, grade, dok, difficulty, stem, choices (A–D, one correct), rationale, standards_tags, misconceptions, version.
+Return a JSON array.
+"""
+
+FIB_USER_TMPL = """
+Generate {n} fill-in-the-blank items.
+SOL: {sol_id} — "{sol_text}"
+Grade {grade} | Strand {strand} | Difficulty {difficulty} | DOK {dok}
+Context preference: {context}
+
+JSON fields: id (uuid), sol_id, grade, stem, answer_key{{expected, alt_equivalents, format}}, tolerance (if needed), units (if any), dok, difficulty, scoring, feedback.
+Return a JSON array.
+"""
+
+CR_USER_TMPL = """
+Generate {n} constructed-response items.
+SOL: {sol_id} — "{sol_text}"
+Grade {grade} | Strand {strand} | Difficulty {difficulty} | DOK {dok}
+Context preference: {context}
+
+JSON fields: id (uuid), sol_id, grade, stem, expected_ideas, rubric (3–4 dimensions, small scales), dok, difficulty.
+Return a JSON array.
+"""
+
+# ----------------- Helpers -----------------
+def call_openai_json(system: str, user: str) -> Any:
+    resp = client.chat.completions.create(
+        model=settings.MODEL,
+        messages=[{"role":"system","content":system},
+                  {"role":"user","content":user}],
+        response_format={"type":"json_object"} if "Return a JSON object" in user else None
+    )
+    content = resp.choices[0].message.content.strip()
+    # Try parse either object or array
+    try:
+        data = json.loads(content)
+    except Exception as e:
+        raise HTTPException(500, f"Model did not return valid JSON: {e}\n{content[:500]}")
+    # If object that wraps 'items', unwrap; else if single object, box as array
+    if isinstance(data, dict) and "items" in data:
+        return data["items"]
+    if isinstance(data, list):
+        return data
+    return [data]
+
+def fraction_equivalent(a: str, b: str) -> bool:
+    def to_float(x: str):
+        x = x.strip()
+        if re.match(r"^\d+\s+\d+/\d+$", x):  # mixed number
+            w, frac = x.split()
+            num, den = frac.split("/")
+            return float(w) + float(num)/float(den)
+        if "/" in x:
+            num, den = x.split("/")
+            return float(num)/float(den)
+        try:
+            return float(x)
+        except:
+            return None
+    fa, fb = to_float(a), to_float(b)
+    if fa is None or fb is None:
+        return False
+    return abs(fa - fb) < 1e-9
+
+def eval_fib(user_resp: str, item: dict) -> dict:
+    key = item["answer_key"]
+    fmt = key.get("format", "text")
+    expected = key["expected"]
+    alts = set(key.get("alt_equivalents", [])) | {expected}
+
+    ok = False
+    normalized = None
+
+    if fmt in ["integer","decimal","rational_number","expression"]:
+        # numeric-ish checks
+        if fmt == "rational_number":
+            ok = any(fraction_equivalent(str(user_resp), ans) for ans in alts)
+            normalized = expected
+        else:
+            try:
+                ok = any(abs(float(str(user_resp)) - float(ans)) <= (item.get("tolerance") or 0.0) for ans in alts if re.match(r"^-?\d+(\.\d+)?$", ans))
+                normalized = str(float(user_resp))
+            except:
+                ok = str(user_resp).strip() in alts
+                normalized = str(user_resp).strip()
+    else:
+        ok = str(user_resp).strip().lower() in {a.lower() for a in alts}
+        normalized = str(user_resp).strip()
+
+    metrics = {
+        "exact_match": str(user_resp).strip() == expected,
+        "equivalent_value": ok and (str(user_resp).strip() != expected),
+        "unit_present": bool(item.get("units")) and (str(item.get("units")).lower() in str(user_resp).lower())
+    }
+    score = 1.0 if ok else 0.0
+    fb = item.get("feedback", {})
+    feedback = fb.get("correct","Correct!") if ok else fb.get("incorrect","Check your scaling/units/precision.")
+
+    return {
+        "is_correct": ok,
+        "score": score,
+        "max_score": 1.0,
+        "metrics": metrics,
+        "normalized_response": normalized,
+        "feedback": feedback,
+        "mastery_increment": 1 if ok else 0
+    }
+
+def eval_mcq(user_resp: str, item: dict) -> dict:
+    correct = None
+    for c in item["choices"]:
+        if c["is_correct"]:
+            correct = c["id"]
+            break
+    ok = (str(user_resp).strip().upper() == str(correct))
+    metrics = {"selected": user_resp, "correct": correct}
+    fb = item.get("rationale", {})
+    feedback = "Correct." if ok else f"Not quite. {fb.get(correct,'Review the concept.')}"
+    return {
+        "is_correct": ok,
+        "score": 1.0 if ok else 0.0,
+        "max_score": 1.0,
+        "metrics": metrics,
+        "feedback": feedback,
+        "mastery_increment": 1 if ok else 0
+    }
+
+def eval_cr(student_text: str, item: dict) -> dict:
+    # simple LLM rubric scoring
+    rubric = item.get("rubric", [])
+    prompt = {
+        "question": item["stem"],
+        "rubric": rubric,
+        "expected_ideas": item.get("expected_ideas", []),
+        "student_response": student_text
+    }
+    resp = client.chat.completions.create(
+        model=settings.MODEL,
+        messages=[
+            {"role":"system","content":"Score with the rubric. Return JSON: {scores: {dim: int}, total: int, max_total: int, feedback:{summary:string,next_step:string}}"},
+            {"role":"user","content":json.dumps(prompt)}
+        ],
+        response_format={"type":"json_object"}
+    )
+    obj = json.loads(resp.choices[0].message.content)
+    obj["mastery_increment"] = 1 if obj.get("total",0) >= 0.7*obj.get("max_total",1) else 0
+    obj["score"] = obj["total"]
+    obj["max_score"] = obj["max_total"]
+    return obj
+
+# ----------------- FastAPI -----------------
+app = FastAPI(title="VA SOL Generator/Scorer/Tracker")
+
+@app.post("/generate")
+def generate(req: GenRequest):
+    if not settings.OPENAI_API_KEY:
+        raise HTTPException(500, "Missing OPENAI_API_KEY")
+    tmpl = {"MCQ": MCQ_USER_TMPL, "FIB": FIB_USER_TMPL, "CR": CR_USER_TMPL}[req.item_type]
+    user_prompt = tmpl.format(**req.dict())
+    items = call_openai_json(SYSTEM_PROMPT, user_prompt)
+
+    # store each item
+    db = SessionLocal()
+    out = []
+    try:
+        for it in items:
+            # inject strand/grade/dok/difficulty if missing
+            it.setdefault("strand", req.strand)
+            it.setdefault("grade", req.grade)
+            it.setdefault("dok", req.dok)
+            it.setdefault("difficulty", req.difficulty)
+            it.setdefault("sol_id", req.sol_id)
+            it.setdefault("id", str(uuid.uuid4()))
+            row = Item(
+                id=it["id"],
+                sol_id=it["sol_id"],
+                strand=it.get("strand",""),
+                grade=it.get("grade",0),
+                dok=it.get("dok",2),
+                difficulty=it.get("difficulty","medium"),
+                item_type=req.item_type,
+                payload=json.dumps(it)
+            )
+            db.add(row)
+            out.append(it)
+        db.commit()
+    finally:
+        db.close()
+    return {"items": out}
+
+@app.post("/submit")
+def submit(req: SubmitRequest):
+    db = SessionLocal()
+    try:
+        row = db.query(Item).filter(Item.id == req.item_id).first()
+        if not row:
+            raise HTTPException(404, "Item not found")
+        item = json.loads(row.payload)
+
+        if row.item_type == "MCQ":
+            result = eval_mcq(str(req.user_response), item)
+        elif row.item_type == "FIB":
+            result = eval_fib(str(req.user_response), item)
+        else:
+            result = eval_cr(str(req.user_response), item)
+
+        att = Attempt(
+            id=str(uuid.uuid4()),
+            user_id=req.user_id,
+            item_id=row.id,
+            sol_id=row.sol_id,
+            item_type=row.item_type,
+            dok=row.dok,
+            difficulty=row.difficulty,
+            score=float(result.get("score",0.0)),
+            max_score=float(result.get("max_score",1.0)),
+            metrics=json.dumps(result.get("metrics",{})),
+            duration_seconds=req.duration_seconds or 0.0
+        )
+        db.add(att)
+        db.commit()
+        return {"evaluation": result}
+    finally:
+        db.close()
+
+@app.get("/mastery/{user_id}")
+def mastery(user_id: str):
+    """
+    Simple EWMA mastery per SOL: M_t = 0.7*M_{t-1} + 0.3*(score/max)
+    """
+    db = SessionLocal()
+    try:
+        rows = db.query(Attempt).filter(Attempt.user_id == user_id).all()
+        by_sol: Dict[str, Dict[str, Any]] = {}
+        for a in rows:
+            frac = (a.score / max(a.max_score, 1e-9))
+            rec = by_sol.setdefault(a.sol_id, {"ewma": 0.5, "n":0, "last":None})
+            rec["ewma"] = 0.7*rec["ewma"] + 0.3*frac
+            rec["n"] += 1
+            rec["last"] = a.created_at.isoformat()
+        return {"user_id": user_id, "sol_mastery": by_sol}
+    finally:
+        db.close()
+
+@app.get("/")
+def root():
+    return {"ok": True, "endpoints": ["/generate", "/submit", "/mastery/{user_id}"]}
+
+3) Run it
+
+Replit auto-runs uvicorn. If not, add:
+
+uvicorn app:app --host 0.0.0.0 --port 8000
+
+4) How to use (examples)
+A) Generate 2 MCQs for 8.MG.4 (Pythagorean Theorem)
+curl -X POST https://<your-repl-url>/generate \
+ -H "Content-Type: application/json" \
+ -d '{
+   "item_type": "MCQ",
+   "sol_id": "8.MG.4",
+   "sol_text": "Apply the Pythagorean Theorem to solve problems involving right triangles, including those in context.",
+   "grade": 8,
+   "strand": "Measurement and Geometry",
+   "difficulty": "medium",
+   "dok": 2,
+   "context": "everyday",
+   "n": 2
+ }'
+
+
+→ Save the returned items[*].id — that’s your item_id.
+
+B) Submit an answer
+curl -X POST https://<your-repl-url>/submit \
+ -H "Content-Type: application/json" \
+ -d '{
+   "user_id": "student-42",
+   "item_id": "PUT-ITEM-ID-HERE",
+   "user_response": "A",
+   "duration_seconds": 34.2
+ }'
+
+C) Mastery snapshot (EWMA)
+curl https://<your-repl-url>/mastery/student-42
+
+5) Notes & knobs
+
+Model choice: change settings.MODEL in app.py.
+
+Excel → SOL picker: your existing spreadsheets can feed a UI; here we only need sol_id + sol_text in the /generate call.
+
+Tolerance/units in FIB: include tolerance and units when you generate; the evaluator already respects them.
+
+Security: add an API key check if exposed publicly.
+
+Analytics: attempts table logs score, dok, difficulty, duration_seconds, enabling dashboards later.
+
+6) Optional: front-end form (quick sketch)
+
+Create a tiny HTML client that:
+
+lets a teacher pick SOL + item type + difficulty → calls /generate
+
+renders the item
+
+collects student response → calls /submit
+
+shows correctness + mastery chip per SOL
+
+(You can add that later; the API is stable.)

@@ -1,0 +1,149 @@
+{
+  "mathematics": {
+    "K": [
+      {"id": "K.NS.1", "text": "Count forward orally by ones to 100, count backward orally by ones from 20, and identify one more and one less than a number up to 20", "strand": "Number and Number Sense"},
+      {"id": "K.NS.2", "text": "Recognize and name the number of items in a set of 10 or fewer items using one-to-one correspondence", "strand": "Number and Number Sense"},
+      {"id": "K.CE.1", "text": "Model addition and subtraction of whole numbers up to 10, using concrete objects", "strand": "Computation and Estimation"},
+      {"id": "K.MG.1", "text": "Identify, describe, and trace plane figures (circle, triangle, square, and rectangle) regardless of their positions and orientations in space", "strand": "Measurement and Geometry"}
+    ],
+    "1": [
+      {"id": "1.NS.1", "text": "Count forward orally by ones to 120, count backward orally by ones from 20, and identify one more and one less than a number up to 120", "strand": "Number and Number Sense"},
+      {"id": "1.NS.2", "text": "Group a collection of up to 120 objects into tens and ones and write the corresponding numeral", "strand": "Number and Number Sense"},
+      {"id": "1.CE.1", "text": "Recall basic addition facts with sums to 10 or less and the corresponding subtraction facts", "strand": "Computation and Estimation"},
+      {"id": "1.CE.2", "text": "Add and subtract within 20 using concrete objects, pictorial representations, and paper and pencil", "strand": "Computation and Estimation"},
+      {"id": "1.MG.1", "text": "Estimate and then use nonstandard units to measure length and weight", "strand": "Measurement and Geometry"}
+    ],
+    "2": [
+      {"id": "2.NS.1", "text": "Read, write, and identify the place value of each digit in a three-digit numeral", "strand": "Number and Number Sense"},
+      {"id": "2.CE.1", "text": "Recall basic addition and subtraction facts through 20", "strand": "Computation and Estimation"},
+      {"id": "2.CE.2", "text": "Add and subtract two-digit numbers", "strand": "Computation and Estimation"},
+      {"id": "2.MG.1", "text": "Estimate and measure length to the nearest inch and centimeter and weight to the nearest pound", "strand": "Measurement and Geometry"},
+      {"id": "2.PS.1", "text": "Apply the problem-solving process to solve problems that contain one-step solutions", "strand": "Patterns, Functions, and Algebra"}
+    ],
+    "3": [
+      {"id": "3.NS.1", "text": "Read and write six-digit numerals and identify the place value and value of each digit", "strand": "Number and Number Sense"},
+      {"id": "3.NS.2", "text": "Round whole numbers, 9,999 or less, to the nearest ten, hundred, and thousand", "strand": "Number and Number Sense"},
+      {"id": "3.CE.1", "text": "Add and subtract whole numbers written in vertical and horizontal form, checking answers using various methods", "strand": "Computation and Estimation"},
+      {"id": "3.CE.2", "text": "Represent multiplication and division through 10 × 10, using arrays, area models, sets of objects, and number lines", "strand": "Computation and Estimation"},
+      {"id": "3.MG.1", "text": "Estimate and use U.S. Customary and metric units to measure length to the nearest 1/2 inch, inch, foot, yard, centimeter, and meter", "strand": "Measurement and Geometry"}
+    ],
+    "4": [
+      {"id": "4.NS.1", "text": "Read, write, represent, and identify the place value and value of each digit in decimals through thousandths", "strand": "Number and Number Sense"},
+      {"id": "4.CE.1", "text": "Estimate sums, differences, products, and quotients of whole numbers and describe the method of estimation", "strand": "Computation and Estimation"},
+      {"id": "4.CE.2", "text": "Add, subtract, and multiply whole numbers written in vertical and horizontal form", "strand": "Computation and Estimation"},
+      {"id": "4.MG.1", "text": "Estimate and measure weight/mass and describe the results in U.S. Customary and metric units", "strand": "Measurement and Geometry"},
+      {"id": "4.MG.2", "text": "Identify and describe representations of points, lines, line segments, rays, and angles", "strand": "Measurement and Geometry"}
+    ],
+    "5": [
+      {"id": "5.NS.1", "text": "Investigate and recognize the identity and the commutative, associative, and distributive properties for addition and multiplication of whole numbers", "strand": "Number and Number Sense"},
+      {"id": "5.NS.2", "text": "Read, write, and identify the place value of decimals through millionths", "strand": "Number and Number Sense"},
+      {"id": "5.CE.1", "text": "Create and solve single-step and multistep practical problems involving addition, subtraction, multiplication, and division of whole numbers", "strand": "Computation and Estimation"},
+      {"id": "5.CE.2", "text": "Find the sum, difference, product, and quotient of two numbers expressed as decimals through thousandths", "strand": "Computation and Estimation"},
+      {"id": "5.MG.1", "text": "Identify and classify angles as right, acute, obtuse, or straight", "strand": "Measurement and Geometry"}
+    ],
+    "6": [
+      {"id": "6.NS.1", "text": "Read, write, represent, compare, and order integers", "strand": "Number and Number Sense"},
+      {"id": "6.NS.2", "text": "Compare and order positive rational numbers represented as fractions, mixed numbers, decimals, and percents", "strand": "Number and Number Sense"},
+      {"id": "6.CE.1", "text": "Multiply and divide fractions and mixed numbers", "strand": "Computation and Estimation"},
+      {"id": "6.CE.2", "text": "Solve single-step and multistep practical problems involving addition, subtraction, multiplication, and division of decimals", "strand": "Computation and Estimation"},
+      {"id": "6.MG.1", "text": "Derive π (pi) and solve problems involving circumference and area of a circle", "strand": "Measurement and Geometry"}
+    ],
+    "7": [
+      {"id": "7.NS.1", "text": "Represent and order rational numbers on a number line", "strand": "Number and Number Sense"},
+      {"id": "7.CE.1", "text": "Add, subtract, multiply, and divide integers", "strand": "Computation and Estimation"},
+      {"id": "7.CE.2", "text": "Add, subtract, multiply, and divide rational numbers", "strand": "Computation and Estimation"},
+      {"id": "7.MG.1", "text": "Apply similarity and proportional reasoning to solve practical problems", "strand": "Measurement and Geometry"},
+      {"id": "7.PFA.1", "text": "Represent and solve two-step linear equations in one variable", "strand": "Patterns, Functions, and Algebra"}
+    ],
+    "8": [
+      {"id": "8.NS.1", "text": "Simplify expressions that contain rational numbers and positive integer exponents", "strand": "Number and Number Sense"},
+      {"id": "8.CE.1", "text": "Estimate, determine, and verify solutions to practical problems involving rational numbers", "strand": "Computation and Estimation"},
+      {"id": "8.MG.1", "text": "Verify the Pythagorean Theorem", "strand": "Measurement and Geometry"},
+      {"id": "8.MG.2", "text": "Apply the Pythagorean Theorem to solve problems involving right triangles", "strand": "Measurement and Geometry"},
+      {"id": "8.PFA.1", "text": "Represent, solve, and justify solutions to two-step linear equations and inequalities in one variable", "strand": "Patterns, Functions, and Algebra"}
+    ]
+  },
+  "science": {
+    "K": [
+      {"id": "K.1", "text": "Use the five senses to make observations", "strand": "Scientific Investigation, Reasoning, and Logic"},
+      {"id": "K.2", "text": "Ask questions and make predictions about familiar objects and events", "strand": "Scientific Investigation, Reasoning, and Logic"},
+      {"id": "K.4", "text": "Recognize basic patterns in weather and the importance of weather to living things", "strand": "Earth/Space Systems and Cycles"},
+      {"id": "K.5", "text": "Observe and identify basic needs of plants and animals", "strand": "Living Systems"}
+    ],
+    "1": [
+      {"id": "1.1", "text": "Demonstrate an understanding of scientific reasoning, logic, and the nature of science by planning and conducting investigations", "strand": "Scientific Investigation, Reasoning, and Logic"},
+      {"id": "1.4", "text": "Investigate and understand how weather and seasonal changes affect plants, animals, and their surroundings", "strand": "Earth/Space Systems and Cycles"},
+      {"id": "1.5", "text": "Investigate and understand that animals, including humans, have basic needs and specific physical characteristics", "strand": "Living Systems"},
+      {"id": "1.6", "text": "Investigate and understand that plants have basic needs and certain distinguishing characteristics", "strand": "Living Systems"}
+    ],
+    "2": [
+      {"id": "2.1", "text": "Demonstrate an understanding of scientific reasoning, logic, and the nature of science by planning and conducting investigations", "strand": "Scientific Investigation, Reasoning, and Logic"},
+      {"id": "2.4", "text": "Investigate and understand basic properties of solids, liquids, and gases", "strand": "Matter"},
+      {"id": "2.6", "text": "Investigate and understand that plants and animals undergo a series of orderly changes in their life cycles", "strand": "Living Systems"},
+      {"id": "2.7", "text": "Investigate and understand that the sun is important to life on Earth", "strand": "Earth/Space Systems and Cycles"}
+    ],
+    "3": [
+      {"id": "3.1", "text": "Demonstrate an understanding of scientific reasoning, logic, and the nature of science by planning and conducting investigations", "strand": "Scientific Investigation, Reasoning, and Logic"},
+      {"id": "3.3", "text": "Investigate and understand that objects are made of materials that can be described by their physical properties", "strand": "Matter"},
+      {"id": "3.4", "text": "Investigate and understand different forms of energy", "strand": "Force, Motion, and Energy"},
+      {"id": "3.10", "text": "Investigate and understand that natural events and humans influence ecosystems", "strand": "Living Systems"}
+    ],
+    "4": [
+      {"id": "4.1", "text": "Demonstrate an understanding of scientific reasoning, logic, and the nature of science by planning and conducting investigations", "strand": "Scientific Investigation, Reasoning, and Logic"},
+      {"id": "4.3", "text": "Investigate and understand the characteristics of electricity", "strand": "Force, Motion, and Energy"},
+      {"id": "4.5", "text": "Investigate and understand how plants and animals, including humans, in an ecosystem interact with one another and with the nonliving components in the ecosystem", "strand": "Living Systems"},
+      {"id": "4.7", "text": "Investigate and understand the organization of the solar system", "strand": "Earth/Space Systems and Cycles"}
+    ],
+    "5": [
+      {"id": "5.1", "text": "Demonstrate an understanding of scientific reasoning, logic, and the nature of science by planning and conducting investigations", "strand": "Scientific Investigation, Reasoning, and Logic"},
+      {"id": "5.4", "text": "Investigate and understand that matter is anything that has mass, takes up space, and occurs as a solid, liquid, or gas", "strand": "Matter"},
+      {"id": "5.5", "text": "Investigate and understand basic characteristics of visible light and how it behaves", "strand": "Force, Motion, and Energy"},
+      {"id": "5.7", "text": "Investigate and understand how the Earth's surface changes over time", "strand": "Earth/Space Systems and Cycles"}
+    ]
+  },
+  "english": [
+    {"grade": "K", "id": "K.1", "text": "Develop oral communication skills", "strand": "Oral Language"},
+    {"grade": "K", "id": "K.2", "text": "Identify, say, and use rhyming words", "strand": "Reading"},
+    {"grade": "K", "id": "K.3", "text": "Identify and name the capital and lowercase letters of the alphabet", "strand": "Reading"},
+    {"grade": "K", "id": "K.4", "text": "Draw pictures and/or use letters and phonetically spelled words to write about experiences", "strand": "Writing"},
+    {"grade": "1", "id": "1.1", "text": "Continue to develop oral communication skills", "strand": "Oral Language"},
+    {"grade": "1", "id": "1.2", "text": "Use phonetic strategies when reading and spelling", "strand": "Reading"},
+    {"grade": "1", "id": "1.3", "text": "Apply knowledge of consonants and vowels to decode words", "strand": "Reading"},
+    {"grade": "1", "id": "1.4", "text": "Use meaning clues and language structure when reading", "strand": "Reading"},
+    {"grade": "1", "id": "1.5", "text": "Use a writing process to develop writing", "strand": "Writing"},
+    {"grade": "2", "id": "2.1", "text": "Continue to demonstrate growth in oral communication skills", "strand": "Oral Language"},
+    {"grade": "2", "id": "2.2", "text": "Use phonetic strategies when reading and spelling", "strand": "Reading"},
+    {"grade": "2", "id": "2.3", "text": "Read familiar stories, poems, and passages with fluency and expression", "strand": "Reading"},
+    {"grade": "2", "id": "2.4", "text": "Use context clues to understand unfamiliar words", "strand": "Reading"},
+    {"grade": "2", "id": "2.5", "text": "Use a writing process to develop writing", "strand": "Writing"},
+    {"grade": "3", "id": "3.1", "text": "Use effective communication skills in group activities", "strand": "Oral Language"},
+    {"grade": "3", "id": "3.2", "text": "Read familiar text with fluency and expression", "strand": "Reading"},
+    {"grade": "3", "id": "3.3", "text": "Read and comprehend a variety of fiction texts", "strand": "Reading"},
+    {"grade": "3", "id": "3.4", "text": "Read and comprehend a variety of nonfiction texts", "strand": "Reading"},
+    {"grade": "3", "id": "3.5", "text": "Use a variety of graphic organizers and reference sources", "strand": "Reading"}
+  ],
+  "history": [
+    {"grade": "K", "id": "K.1", "text": "Develop an awareness of history as the study of the past", "strand": "History"},
+    {"grade": "K", "id": "K.2", "text": "Understand the difference between past and present", "strand": "History"},
+    {"grade": "K", "id": "K.3", "text": "Recognize symbols and traditions of the United States", "strand": "Geography"},
+    {"grade": "1", "id": "1.1", "text": "Develop skills for historical thinking", "strand": "History"},
+    {"grade": "1", "id": "1.2", "text": "Describe past and present family life", "strand": "History"},
+    {"grade": "1", "id": "1.3", "text": "Explain the importance of rules and consequences", "strand": "Civics"},
+    {"grade": "2", "id": "2.1", "text": "Develop an understanding of historical chronology", "strand": "History"},
+    {"grade": "2", "id": "2.2", "text": "Compare life in America today with life in the past", "strand": "History"},
+    {"grade": "2", "id": "2.3", "text": "Describe natural and human-made features", "strand": "Geography"},
+    {"grade": "3", "id": "3.1", "text": "Develop an understanding of historical thinking skills", "strand": "History"},
+    {"grade": "3", "id": "3.2", "text": "Explain how the contributions of ancient China and Egypt have influenced the present world", "strand": "History"},
+    {"grade": "3", "id": "3.3", "text": "Explain how the contributions of ancient Greece, Rome, and Mali have influenced the present world", "strand": "History"}
+  ],
+  "health": [
+    {"grade": "K", "id": "K.1", "text": "Identify basic health habits that promote personal health and wellness", "strand": "Health and Wellness"},
+    {"grade": "K", "id": "K.2", "text": "Identify safety rules for the home, school, and community", "strand": "Safety and Injury Prevention"},
+    {"grade": "1", "id": "1.1", "text": "Identify personal health habits that promote health and wellness", "strand": "Health and Wellness"},
+    {"grade": "1", "id": "1.2", "text": "Describe basic safety rules for home, school, and community", "strand": "Safety and Injury Prevention"},
+    {"grade": "2", "id": "2.1", "text": "Explain the relationship between healthy behaviors and personal health", "strand": "Health and Wellness"},
+    {"grade": "2", "id": "2.2", "text": "Describe safety procedures for pedestrians", "strand": "Safety and Injury Prevention"},
+    {"grade": "3", "id": "3.1", "text": "Explain the relationship between healthy behaviors and personal health", "strand": "Health and Wellness"},
+    {"grade": "3", "id": "3.2", "text": "Describe how the environment can affect personal health", "strand": "Environmental Health"}
+  ]
+}
