@@ -70,11 +70,14 @@ export default function SOLAssessment({ currentUser, onLogout }: SOLAssessmentPr
   // Generate assessment item mutation
   const generateItemMutation = useMutation({
     mutationFn: async (params: {
-      solId: string;
+      standardId: string;
       itemType: ItemType;
       difficulty: string;
     }) => {
-      const response = await apiRequest("POST", "/api/sol/generate", params);
+      const response = await apiRequest("POST", "/api/sol/generate-item", {
+        ...params,
+        userId: currentUser.id,
+      });
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.message || "Failed to generate assessment item");
@@ -82,7 +85,7 @@ export default function SOLAssessment({ currentUser, onLogout }: SOLAssessmentPr
       return response.json();
     },
     onSuccess: (data) => {
-      setCurrentItem(data.item);
+      setCurrentItem(data);
       setStartTime(new Date());
       setUserResponse("");
       setShowResults(false);
@@ -104,9 +107,11 @@ export default function SOLAssessment({ currentUser, onLogout }: SOLAssessmentPr
       userResponse: string;
       durationSeconds: number;
     }) => {
-      const response = await apiRequest("POST", "/api/sol/submit", {
+      const response = await apiRequest("POST", "/api/sol/submit-attempt", {
         userId: currentUser.id,
-        ...params,
+        itemId: params.itemId,
+        response: params.userResponse,
+        timeSpent: params.durationSeconds,
       });
       if (!response.ok) {
         const error = await response.json();
@@ -139,7 +144,7 @@ export default function SOLAssessment({ currentUser, onLogout }: SOLAssessmentPr
     }
 
     generateItemMutation.mutate({
-      solId: selectedStandard,
+      standardId: selectedStandard,
       itemType: selectedItemType,
       difficulty: selectedDifficulty,
     });
@@ -199,14 +204,17 @@ export default function SOLAssessment({ currentUser, onLogout }: SOLAssessmentPr
             <div className="space-y-4">
               {currentItem.itemType === "MCQ" && (
                 <RadioGroup value={userResponse} onValueChange={setUserResponse}>
-                  {(payload as MCQPayload).choices.map((choice) => (
-                    <div key={choice.id} className="flex items-center space-x-2">
-                      <RadioGroupItem value={choice.id} id={choice.id} />
-                      <Label htmlFor={choice.id} className="flex-1 cursor-pointer">
-                        <span className="font-medium">{choice.id}.</span> {choice.text}
-                      </Label>
-                    </div>
-                  ))}
+                  {payload.options?.map((option: string, index: number) => {
+                    const optionLetter = String.fromCharCode(65 + index); // A, B, C, D
+                    return (
+                      <div key={optionLetter} className="flex items-center space-x-2">
+                        <RadioGroupItem value={optionLetter} id={optionLetter} />
+                        <Label htmlFor={optionLetter} className="flex-1 cursor-pointer">
+                          {option}
+                        </Label>
+                      </div>
+                    );
+                  })}
                 </RadioGroup>
               )}
 

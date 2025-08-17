@@ -409,9 +409,8 @@ Format your response as a complete question that I can ask directly to the stude
       let systemPrompt = `You are an expert educational assessment creator specializing in Virginia Standards of Learning (SOL) aligned questions.
 
 Create a ${difficulty || 'medium'} difficulty ${itemType} question for Grade ${user.grade} students aligned to:
-Standard: ${standard.code}
+Standard: ${standard.id}
 Subject: ${standard.subject}  
-Title: ${standard.title}
 Description: ${standard.description}
 
 Requirements:
@@ -455,7 +454,7 @@ Response format must be valid JSON matching this structure:`;
         model: "gpt-4o",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: `Generate a ${itemType} question for: ${standard.title}` }
+          { role: "user", content: `Generate a ${itemType} question for: ${standard.description}` }
         ],
         temperature: 0.7,
         max_tokens: 1000
@@ -491,16 +490,13 @@ Response format must be valid JSON matching this structure:`;
 
       // Create assessment item record
       const assessmentItem = await storage.createAssessmentItem({
-        standardId: standardId,
+        solId: standardId,
         itemType: itemType,
         difficulty: difficulty || 'medium',
-        question: questionData.question,
-        options: questionData.options || null,
-        correctAnswer: questionData.correct_answer || questionData.correct_answers?.[0] || null,
-        acceptableAnswers: questionData.correct_answers || null,
-        rubric: questionData.rubric || null,
-        explanation: questionData.explanation || questionData.sample_answer || null,
-        metadata: {
+        dok: 2, // Default DOK level
+        stem: questionData.question,
+        payload: {
+          ...questionData,
           generatedBy: 'openai-gpt4o',
           userGrade: user.grade,
           userAge: user.age,
@@ -548,28 +544,30 @@ Response format must be valid JSON matching this structure:`;
       let feedback = "";
 
       // Score the response based on item type
+      const payload = item.payload as any;
+      
       if (item.itemType === 'MCQ') {
         maxScore = 1;
-        isCorrect = response === item.correctAnswer;
+        isCorrect = response === payload.correct_answer;
         score = isCorrect ? 1 : 0;
-        feedback = item.explanation || "";
+        feedback = payload.explanation || "";
       } else if (item.itemType === 'FIB') {
         maxScore = 1;
-        const acceptable = item.acceptableAnswers || [item.correctAnswer];
-        isCorrect = acceptable.some(answer => 
+        const acceptable = payload.correct_answers || [payload.correct_answer];
+        isCorrect = acceptable.some((answer: string) => 
           answer && response.toLowerCase().trim().includes(answer.toLowerCase().trim())
         );
         score = isCorrect ? 1 : 0;
-        feedback = item.explanation || "";
+        feedback = payload.explanation || "";
       } else if (item.itemType === 'CR') {
         // Use AI to score constructed response
         maxScore = 4;
         const scoringPrompt = `Score this student response using the provided rubric.
 
-Question: ${item.question}
+Question: ${item.stem}
 
 Rubric:
-${JSON.stringify(item.rubric, null, 2)}
+${JSON.stringify(payload.rubric, null, 2)}
 
 Student Response: ${response}
 
@@ -621,17 +619,13 @@ Provide a score from 1-4 and brief feedback. Respond with JSON:
       const attempt = await storage.createAssessmentAttempt({
         itemId: itemId,
         userId: userId,
-        standardId: item.standardId,
-        response: response,
+        solId: item.solId,
+        userResponse: response,
         isCorrect: isCorrect,
         score: score,
         maxScore: maxScore,
-        timeSpent: req.body.timeSpent || 0,
-        metadata: {
-          itemType: item.itemType,
-          difficulty: item.difficulty,
-          timestamp: new Date().toISOString()
-        }
+        durationSeconds: req.body.timeSpent || 0,
+        feedback: feedback
       });
 
       res.json({
@@ -640,7 +634,7 @@ Provide a score from 1-4 and brief feedback. Respond with JSON:
         score: score,
         max_score: maxScore,
         feedback: feedback,
-        explanation: item.explanation
+        explanation: (item.payload as any).explanation
       });
     } catch (error) {
       console.error("Error submitting assessment attempt:", error);
