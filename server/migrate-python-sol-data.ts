@@ -94,7 +94,7 @@ async function migratePythonSolData() {
 }
 
 async function processPythonFile(filePath: string, subject: string, grade: string) {
-  const fullPath = join(process.cwd(), filePath);
+  const fullPath = join(process.cwd(), "..", filePath.replace("../", ""));
   const fileContent = readFileSync(fullPath, "utf-8");
   
   const standards = [];
