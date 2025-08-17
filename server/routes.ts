@@ -466,10 +466,24 @@ Response format must be valid JSON matching this structure:`;
         return res.status(500).json({ message: "Failed to generate question content" });
       }
 
-      // Parse the AI response
+      // Parse the AI response - handle markdown code blocks
       let questionData;
       try {
-        questionData = JSON.parse(generatedContent);
+        let cleanContent = generatedContent;
+        // Remove markdown code blocks and extra text
+        const jsonMatch = cleanContent.match(/```json\s*([\s\S]*?)\s*```/);
+        if (jsonMatch) {
+          cleanContent = jsonMatch[1];
+        } else {
+          // Try to extract JSON from the text
+          const jsonStart = cleanContent.indexOf('{');
+          const jsonEnd = cleanContent.lastIndexOf('}');
+          if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+            cleanContent = cleanContent.slice(jsonStart, jsonEnd + 1);
+          }
+        }
+        
+        questionData = JSON.parse(cleanContent.trim());
       } catch (parseError) {
         console.error("Failed to parse AI response:", generatedContent);
         return res.status(500).json({ message: "Failed to parse generated question" });
@@ -577,7 +591,21 @@ Provide a score from 1-4 and brief feedback. Respond with JSON:
         });
 
         try {
-          const scoringResult = JSON.parse(scoringCompletion.choices[0]?.message?.content || "{}");
+          let scoringContent = scoringCompletion.choices[0]?.message?.content || "{}";
+          // Remove markdown code blocks and extra text
+          const jsonMatch = scoringContent.match(/```json\s*([\s\S]*?)\s*```/);
+          if (jsonMatch) {
+            scoringContent = jsonMatch[1];
+          } else {
+            // Try to extract JSON from the text
+            const jsonStart = scoringContent.indexOf('{');
+            const jsonEnd = scoringContent.lastIndexOf('}');
+            if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+              scoringContent = scoringContent.slice(jsonStart, jsonEnd + 1);
+            }
+          }
+          
+          const scoringResult = JSON.parse(scoringContent.trim());
           score = scoringResult.score || 1;
           isCorrect = scoringResult.isCorrect || score >= 3;
           feedback = scoringResult.feedback || "Good effort! Keep working on this topic.";
