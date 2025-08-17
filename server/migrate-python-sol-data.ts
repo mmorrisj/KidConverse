@@ -12,7 +12,7 @@ async function migratePythonSolData() {
     // File mappings with their expected variable names and formats
     const fileConfigs = [
       { file: "ALG_MATH_SOL.py", grade: "Algebra1", variable: "algebra1_data", format: "algebra" },
-      { file: "ALG2_MATH_SOL.py", grade: "Algebra2", variable: "algebra2_data", format: "algebra" },
+      { file: "ALG2_MATH_SOL.py", grade: "Algebra2", variable: "a2_data", format: "algebra" },
       { file: "AFDA_MATH_SOL.py", grade: "AFDA", variable: "afda_data", format: "algebra" },
       { file: "TRIG_MATH_SOL.py", grade: "Trigonometry", variable: "trig_data", format: "algebra" },
       { file: "1_MATH_SOL.py", grade: "1", variable: "grade1_standards", format: "grade" },
@@ -21,7 +21,7 @@ async function migratePythonSolData() {
       { file: "4_MATH_SOL.py", grade: "4", variable: "grade4_standards", format: "grade" },
       { file: "5_MATH_SOL.py", grade: "5", variable: "grade5_standards", format: "grade" },
       { file: "6_MATH_SOL.py", grade: "6", variable: "grade6_standards", format: "grade" },
-      { file: "7_MATH_SOL.py", grade: "7", variable: "grade7_standards", format: "grade" },
+      { file: "7_MATH_SOL.py", grade: "7", variable: "grade7_data", format: "grade" },
     ];
 
     for (const config of fileConfigs) {
