@@ -348,6 +348,303 @@ Format your response as a complete question that I can ask directly to the stude
     }
   });
 
+  // ===== SOL ASSESSMENT ROUTES =====
+  
+  // Get SOL Standards with optional filtering
+  app.get("/api/sol/standards", async (req, res) => {
+    try {
+      const { subject, grade } = req.query;
+      const standards = await storage.getSolStandards(
+        subject as string, 
+        grade as string
+      );
+      res.json(standards);
+    } catch (error) {
+      console.error("Error fetching SOL standards:", error);
+      res.status(500).json({ message: "Failed to fetch SOL standards" });
+    }
+  });
+
+  // Get specific SOL standard
+  app.get("/api/sol/standards/:id", async (req, res) => {
+    try {
+      const standard = await storage.getSolStandardById(req.params.id);
+      if (!standard) {
+        return res.status(404).json({ message: "Standard not found" });
+      }
+      res.json(standard);
+    } catch (error) {
+      console.error("Error fetching SOL standard:", error);
+      res.status(500).json({ message: "Failed to fetch SOL standard" });
+    }
+  });
+
+  // Generate assessment item with AI
+  app.post("/api/sol/generate-item", async (req, res) => {
+    try {
+      if (!openai) {
+        return res.status(500).json({ message: "OpenAI API key not configured" });
+      }
+
+      const { standardId, itemType, difficulty, userId } = req.body;
+      
+      // Validate input
+      if (!standardId || !itemType || !userId) {
+        return res.status(400).json({ message: "Missing required fields: standardId, itemType, userId" });
+      }
+
+      // Get the SOL standard
+      const standard = await storage.getSolStandardById(standardId);
+      if (!standard) {
+        return res.status(404).json({ message: "Standard not found" });
+      }
+
+      // Get user for grade-appropriate content
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Generate AI prompt based on item type and standard
+      let systemPrompt = `You are an expert educational assessment creator specializing in Virginia Standards of Learning (SOL) aligned questions.
+
+Create a ${difficulty || 'medium'} difficulty ${itemType} question for Grade ${user.grade} students aligned to:
+Standard: ${standard.code}
+Subject: ${standard.subject}  
+Title: ${standard.title}
+Description: ${standard.description}
+
+Requirements:
+- Age-appropriate language for Grade ${user.grade} students (ages ${user.age || (parseInt(user.grade) + 5)})
+- Academically rigorous and pedagogically sound
+- Clear, unambiguous wording
+- Aligned to the specific SOL standard
+
+Response format must be valid JSON matching this structure:`;
+
+      if (itemType === 'MCQ') {
+        systemPrompt += `
+{
+  "question": "Clear question text",
+  "options": ["A) Option 1", "B) Option 2", "C) Option 3", "D) Option 4"],
+  "correct_answer": "A",
+  "explanation": "Why this is correct and others are wrong"
+}`;
+      } else if (itemType === 'FIB') {
+        systemPrompt += `
+{
+  "question": "Question with __blank__ to fill in",
+  "correct_answers": ["acceptable answer 1", "acceptable answer 2"],
+  "explanation": "What makes a good answer"
+}`;
+      } else if (itemType === 'CR') {
+        systemPrompt += `
+{
+  "question": "Open-ended question requiring detailed response",
+  "rubric": {
+    "excellent": "4 points criteria",
+    "good": "3 points criteria", 
+    "satisfactory": "2 points criteria",
+    "needs_improvement": "1 point criteria"
+  },
+  "sample_answer": "Example of excellent response"
+}`;
+      }
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: `Generate a ${itemType} question for: ${standard.title}` }
+        ],
+        temperature: 0.7,
+        max_tokens: 1000
+      });
+
+      const generatedContent = completion.choices[0]?.message?.content;
+      if (!generatedContent) {
+        return res.status(500).json({ message: "Failed to generate question content" });
+      }
+
+      // Parse the AI response
+      let questionData;
+      try {
+        questionData = JSON.parse(generatedContent);
+      } catch (parseError) {
+        console.error("Failed to parse AI response:", generatedContent);
+        return res.status(500).json({ message: "Failed to parse generated question" });
+      }
+
+      // Create assessment item record
+      const assessmentItem = await storage.createAssessmentItem({
+        standardId: standardId,
+        itemType: itemType,
+        difficulty: difficulty || 'medium',
+        question: questionData.question,
+        options: questionData.options || null,
+        correctAnswer: questionData.correct_answer || questionData.correct_answers?.[0] || null,
+        acceptableAnswers: questionData.correct_answers || null,
+        rubric: questionData.rubric || null,
+        explanation: questionData.explanation || questionData.sample_answer || null,
+        metadata: {
+          generatedBy: 'openai-gpt4o',
+          userGrade: user.grade,
+          userAge: user.age,
+          timestamp: new Date().toISOString()
+        }
+      });
+
+      res.json(assessmentItem);
+    } catch (error) {
+      console.error("Error generating assessment item:", error);
+      res.status(500).json({ 
+        message: "Failed to generate assessment item",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Submit assessment attempt
+  app.post("/api/sol/submit-attempt", async (req, res) => {
+    try {
+      if (!openai) {
+        return res.status(500).json({ message: "OpenAI API key not configured" });
+      }
+
+      const { itemId, userId, response } = req.body;
+      
+      // Validate input
+      if (!itemId || !userId || response === undefined) {
+        return res.status(400).json({ message: "Missing required fields: itemId, userId, response" });
+      }
+
+      // Get the assessment item and user
+      const [item, user] = await Promise.all([
+        storage.getAssessmentItem(itemId),
+        storage.getUser(userId)
+      ]);
+
+      if (!item || !user) {
+        return res.status(404).json({ message: "Item or user not found" });
+      }
+
+      let isCorrect = false;
+      let score = 0;
+      let maxScore = 0;
+      let feedback = "";
+
+      // Score the response based on item type
+      if (item.itemType === 'MCQ') {
+        maxScore = 1;
+        isCorrect = response === item.correctAnswer;
+        score = isCorrect ? 1 : 0;
+        feedback = item.explanation || "";
+      } else if (item.itemType === 'FIB') {
+        maxScore = 1;
+        const acceptable = item.acceptableAnswers || [item.correctAnswer];
+        isCorrect = acceptable.some(answer => 
+          answer && response.toLowerCase().trim().includes(answer.toLowerCase().trim())
+        );
+        score = isCorrect ? 1 : 0;
+        feedback = item.explanation || "";
+      } else if (item.itemType === 'CR') {
+        // Use AI to score constructed response
+        maxScore = 4;
+        const scoringPrompt = `Score this student response using the provided rubric.
+
+Question: ${item.question}
+
+Rubric:
+${JSON.stringify(item.rubric, null, 2)}
+
+Student Response: ${response}
+
+Provide a score from 1-4 and brief feedback. Respond with JSON:
+{
+  "score": <number 1-4>,
+  "feedback": "<encouraging feedback with specific suggestions>",
+  "isCorrect": <true if score >= 3, false otherwise>
+}`;
+
+        const scoringCompletion = await openai.chat.completions.create({
+          model: "gpt-4o",
+          messages: [
+            { role: "system", content: "You are a fair and encouraging teacher scoring student responses." },
+            { role: "user", content: scoringPrompt }
+          ],
+          temperature: 0.3,
+          max_tokens: 300
+        });
+
+        try {
+          const scoringResult = JSON.parse(scoringCompletion.choices[0]?.message?.content || "{}");
+          score = scoringResult.score || 1;
+          isCorrect = scoringResult.isCorrect || score >= 3;
+          feedback = scoringResult.feedback || "Good effort! Keep working on this topic.";
+        } catch (error) {
+          console.error("Error parsing scoring result:", error);
+          score = 2;
+          isCorrect = false;
+          feedback = "Your response has been received. Keep practicing!";
+        }
+      }
+
+      // Create assessment attempt record
+      const attempt = await storage.createAssessmentAttempt({
+        itemId: itemId,
+        userId: userId,
+        standardId: item.standardId,
+        response: response,
+        isCorrect: isCorrect,
+        score: score,
+        maxScore: maxScore,
+        timeSpent: req.body.timeSpent || 0,
+        metadata: {
+          itemType: item.itemType,
+          difficulty: item.difficulty,
+          timestamp: new Date().toISOString()
+        }
+      });
+
+      res.json({
+        id: attempt.id,
+        is_correct: isCorrect,
+        score: score,
+        max_score: maxScore,
+        feedback: feedback,
+        explanation: item.explanation
+      });
+    } catch (error) {
+      console.error("Error submitting assessment attempt:", error);
+      res.status(500).json({ 
+        message: "Failed to submit attempt",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Get user mastery data
+  app.get("/api/sol/mastery/:userId", async (req, res) => {
+    try {
+      const mastery = await storage.getMasteryByUser(req.params.userId);
+      res.json(mastery);
+    } catch (error) {
+      console.error("Error fetching mastery data:", error);
+      res.status(500).json({ message: "Failed to fetch mastery data" });
+    }
+  });
+
+  // Get user's assessment history
+  app.get("/api/sol/attempts/:userId", async (req, res) => {
+    try {
+      const attempts = await storage.getAssessmentAttemptsByUser(req.params.userId);
+      res.json(attempts);
+    } catch (error) {
+      console.error("Error fetching assessment attempts:", error);
+      res.status(500).json({ message: "Failed to fetch attempts" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

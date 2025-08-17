@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Navigation } from "@/components/Navigation";
 import ChatSidebar from "../components/chat/ChatSidebar";
 import ChatMessages from "../components/chat/ChatMessages";
 import MessageInput from "../components/chat/MessageInput";
@@ -45,7 +46,9 @@ export default function ChatPage({ currentUser, onLogout }: ChatPageProps) {
   };
 
   return (
-    <div className="flex h-screen h-dvh bg-chat-bg overflow-hidden">
+    <div className="flex flex-col h-screen h-dvh bg-chat-bg overflow-hidden">
+      <Navigation currentUser={currentUser} onLogout={onLogout || (() => {})} />
+      <div className="flex flex-1 overflow-hidden">
       {/* Mobile Sidebar Overlay */}
       {isSidebarOpen && (
         <div 
@@ -145,6 +148,7 @@ export default function ChatPage({ currentUser, onLogout }: ChatPageProps) {
           />
         </div>
       </main>
+      </div>
     </div>
   );
 }
