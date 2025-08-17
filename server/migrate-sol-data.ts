@@ -29,16 +29,17 @@ async function migrateSolData() {
           
           standardsToInsert.push({
             id: `${subject}-${grade}-${code}`,
-            code: code,
+            standardCode: code,
             subject: subject,
             grade: grade,
+            strand: standardData.strands?.[0] || "General",
             title: standardData.title || "",
             description: standardData.description || "",
-            strands: standardData.strands || [],
             metadata: {
               imported: true,
               importDate: new Date().toISOString(),
-              source: "virginia-sol"
+              source: "virginia-sol",
+              strands: standardData.strands || []
             }
           });
         }
