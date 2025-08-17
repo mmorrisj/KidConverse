@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { createORMSession } from "./orm-models";
 import { generateChatResponse, generateChatResponseStream, filterUserInput } from "./services/openai";
 import OpenAI from "openai";
 import { insertChatSchema, insertMessageSchema, insertUserSchema } from "@shared/schema";
@@ -15,6 +16,9 @@ const openai = process.env.OPENAI_API_KEY
   ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
   : null;
 
+// Initialize ORM session
+const orm = createORMSession(storage);
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Health check
   app.get("/health", (req, res) => {
@@ -26,15 +30,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userData = insertUserSchema.parse(req.body);
       
-      // Check if user already exists
-      const existingUser = await storage.getUserByEmail(userData.email);
+      // Check if user already exists (using ORM)
+      const existingUser = await orm.User.findByEmail(userData.email);
       if (existingUser) {
         return res.status(400).json({ 
           message: "A user with this email already exists. Please use a different email." 
         });
       }
 
-      const user = await storage.createUser(userData);
+      const user = await orm.User.create(userData);
       res.json(user);
     } catch (error: any) {
       console.error("Registration error:", error);
@@ -44,10 +48,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get all users
+  // Get all users (using ORM)
   app.get("/api/users", async (req, res) => {
     try {
-      const users = await storage.getAllUsers();
+      const users = await orm.User.findAll();
       res.json(users);
     } catch (error) {
       console.error("Error fetching users:", error);
@@ -55,10 +59,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get user info
+  // Get user info (using ORM)
   app.get("/api/users/:id", async (req, res) => {
     try {
-      const user = await storage.getUser(req.params.id);
+      const user = await orm.User.findById(req.params.id);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
@@ -69,14 +73,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get all chats for a user
+  // Get all chats for a user (using ORM)
   app.get("/api/chats", async (req, res) => {
     try {
       const userId = req.query.userId as string;
       if (!userId) {
         return res.status(400).json({ message: "userId is required" });
       }
-      const chats = await storage.getChatsByUserId(userId);
+      const chats = await orm.Chat.findByUserId(userId);
       res.json(chats);
     } catch (error) {
       console.error("Error fetching chats:", error);
@@ -84,11 +88,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Create a new chat
+  // Create a new chat (using ORM)
   app.post("/api/chats", async (req, res) => {
     try {
       const data = insertChatSchema.parse(req.body);
-      const chat = await storage.createChat(data);
+      const chat = await orm.Chat.create(data);
       res.json(chat);
     } catch (error) {
       if (error instanceof z.ZodError) {
