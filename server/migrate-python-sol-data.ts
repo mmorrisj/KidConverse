@@ -1,4 +1,3 @@
-
 import { readFileSync } from "fs";
 import { join } from "path";
 import { db } from "./db";
@@ -7,211 +6,169 @@ import { solStandards } from "@shared/schema";
 async function migratePythonSolData() {
   try {
     console.log("Loading SOL standards from Python files...");
-    
+
     const standardsToInsert = [];
-    
-    // Process Algebra 1 standards
-    try {
-      const algebraData = await processPythonFile("../SOL/ALG_MATH_SOL.py", "mathematics", "Algebra1");
-      standardsToInsert.push(...algebraData);
-      console.log(`Loaded ${algebraData.length} Algebra 1 standards`);
-    } catch (error) {
-      console.log(`Error processing Algebra 1: ${error}`);
-    }
-    
-    // Process Grade 2 standards
-    try {
-      const grade2Data = await processPythonFile("../SOL/2_MATH_SOL.py", "mathematics", "2");
-      standardsToInsert.push(...grade2Data);
-      console.log(`Loaded ${grade2Data.length} Grade 2 standards`);
-    } catch (error) {
-      console.log(`Error processing Grade 2: ${error}`);
-    }
-    
-    // Process Grade 3 standards
-    try {
-      const grade3Data = await processPythonFile("../SOL/3_MATH_SOL.py", "mathematics", "3");
-      standardsToInsert.push(...grade3Data);
-      console.log(`Loaded ${grade3Data.length} Grade 3 standards`);
-    } catch (error) {
-      console.log(`Error processing Grade 3: ${error}`);
-    }
-    
-    // Process other grade files
-    for (let grade = 1; grade <= 7; grade++) {
-      if (grade === 2 || grade === 3) continue; // Already processed
-      try {
-        const gradeData = await processPythonFile(`../SOL/${grade}_MATH_SOL.py`, "mathematics", grade.toString());
-        standardsToInsert.push(...gradeData);
-        console.log(`Loaded ${gradeData.length} Grade ${grade} standards`);
-      } catch (error) {
-        console.log(`Grade ${grade} file not found or error processing: ${error}`);
-      }
-    }
-    
-    // Process other algebra files
-    const otherFiles = [
-      { file: "ALG2_MATH_SOL.py", grade: "Algebra2" },
-      { file: "AFDA_MATH_SOL.py", grade: "AFDA" },
-      { file: "TRIG_MATH_SOL.py", grade: "Trigonometry" }
+
+    // File mappings with their expected variable names and formats
+    const fileConfigs = [
+      { file: "ALG_MATH_SOL.py", grade: "Algebra1", variable: "algebra1_data", format: "algebra" },
+      { file: "ALG2_MATH_SOL.py", grade: "Algebra2", variable: "algebra2_data", format: "algebra" },
+      { file: "AFDA_MATH_SOL.py", grade: "AFDA", variable: "afda_data", format: "algebra" },
+      { file: "TRIG_MATH_SOL.py", grade: "Trigonometry", variable: "trig_data", format: "algebra" },
+      { file: "1_MATH_SOL.py", grade: "1", variable: "grade1_standards", format: "grade" },
+      { file: "2_MATH_SOL.py", grade: "2", variable: "grade2_standards", format: "grade" },
+      { file: "3_MATH_SOL.py", grade: "3", variable: "standards_data", format: "grade" },
+      { file: "4_MATH_SOL.py", grade: "4", variable: "grade4_standards", format: "grade" },
+      { file: "5_MATH_SOL.py", grade: "5", variable: "grade5_standards", format: "grade" },
+      { file: "6_MATH_SOL.py", grade: "6", variable: "grade6_standards", format: "grade" },
+      { file: "7_MATH_SOL.py", grade: "7", variable: "grade7_standards", format: "grade" },
     ];
-    
-    for (const { file, grade } of otherFiles) {
+
+    for (const config of fileConfigs) {
       try {
-        const data = await processPythonFile(`../SOL/${file}`, "mathematics", grade);
-        standardsToInsert.push(...data);
-        console.log(`Loaded ${data.length} ${grade} standards`);
+        const filePath = join(process.cwd(), "..", "SOL", config.file);
+        const fileContent = readFileSync(filePath, "utf-8");
+
+        const standards = parseFile(fileContent, config, "mathematics");
+        standardsToInsert.push(...standards);
+        console.log(`✅ Loaded ${standards.length} standards from ${config.file}`);
       } catch (error) {
-        console.log(`File ${file} not found or error processing: ${error}`);
+        console.log(`❌ Error processing ${config.file}: ${error.message}`);
       }
     }
-    
-    console.log(`Preparing to insert ${standardsToInsert.length} standards...`);
-    
+
+    console.log(`\nPreparing to insert ${standardsToInsert.length} standards...`);
+
     if (standardsToInsert.length === 0) {
       console.log("No standards found to insert. Check file parsing logic.");
       return;
     }
-    
+
+    // Clear existing standards to avoid duplicates
+    await db.delete(solStandards);
+    console.log("Cleared existing standards");
+
     // Insert standards in batches
     const batchSize = 50;
     for (let i = 0; i < standardsToInsert.length; i += batchSize) {
       const batch = standardsToInsert.slice(i, i + batchSize);
-      await db.insert(solStandards).values(batch).onConflictDoNothing();
+      await db.insert(solStandards).values(batch);
       console.log(`Inserted batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(standardsToInsert.length / batchSize)}`);
     }
-    
+
     console.log("✅ Python SOL standards migration completed successfully!");
-    
+
     // Verify the data
     const count = await db.select().from(solStandards);
     console.log(`📊 Total standards in database: ${count.length}`);
-    
+
   } catch (error) {
     console.error("❌ Error during Python SOL data migration:", error);
     throw error;
   }
 }
 
-async function processPythonFile(filePath: string, subject: string, grade: string) {
-  const fullPath = join(process.cwd(), filePath);
-  const fileContent = readFileSync(fullPath, "utf-8");
-  
+function parseFile(content: string, config: any, subject: string) {
   const standards = [];
-  
-  if (filePath.includes("ALG_MATH_SOL.py")) {
-    // Process Algebra 1 format: ("A.EO.1", "description", ["sub1", "sub2"])
-    const algebraMatch = fileContent.match(/algebra1_data\s*=\s*\[([\s\S]*?)\n\]/);
-    if (algebraMatch) {
-      const dataStr = algebraMatch[1];
-      // More robust regex to match tuples
-      const tupleRegex = /\(\s*"([^"]+)"\s*,\s*"([^"]+)"\s*,\s*\[([\s\S]*?)\]\s*\)/g;
-      let match;
-      
-      while ((match = tupleRegex.exec(dataStr)) !== null) {
-        const [, code, description, subStandardsStr] = match;
-        
-        // Add main standard
-        standards.push({
-          id: `${subject}-${grade}-${code}`,
-          subject: subject,
-          grade: grade,
-          strand: extractStrand(code),
-          description: description
-        });
-        
-        // Extract sub-standards
-        const subStandardRegex = /"([^"]+)"/g;
-        let subMatch;
-        while ((subMatch = subStandardRegex.exec(subStandardsStr)) !== null) {
-          const subDescription = subMatch[1];
-          const subCode = extractSubStandardCode(subDescription);
-          
+
+  try {
+    if (config.format === "algebra") {
+      // Parse algebra format: ("code", "description", ["sub1", "sub2"])
+      const match = content.match(new RegExp(`${config.variable}\\s*=\\s*\\[([\\s\\S]*?)\\n\\]`));
+      if (!match) {
+        console.log(`Could not find ${config.variable} in file`);
+        return standards;
+      }
+
+      const dataContent = match[1];
+
+      // Split by main tuples - look for patterns like ("A.EO.1", "description", [
+      const tupleMatches = dataContent.split(/(?=\s*\(\s*"[A-Z]\.[A-Z]+\.\d+")/).filter(part => part.trim());
+
+      for (const tupleContent of tupleMatches) {
+        const tupleMatch = tupleContent.match(/\(\s*"([^"]+)"\s*,\s*"([^"]+)"\s*,\s*\[([\s\S]*?)\]\s*\)/);
+        if (tupleMatch) {
+          const [, code, description, subStandardsStr] = tupleMatch;
+
+          // Add main standard
           standards.push({
-            id: `${subject}-${grade}-${subCode}`,
+            id: `${subject}-${config.grade}-${code}`,
             subject: subject,
-            grade: grade,
+            grade: config.grade,
             strand: extractStrand(code),
-            description: subDescription
+            description: description.trim()
           });
+
+          // Extract sub-standards
+          const subMatches = subStandardsStr.match(/"([^"]+)"/g);
+          if (subMatches) {
+            subMatches.forEach(subMatch => {
+              const subDescription = subMatch.replace(/"/g, '');
+              const subCode = extractSubStandardCode(subDescription, code);
+
+              standards.push({
+                id: `${subject}-${config.grade}-${subCode}`,
+                subject: subject,
+                grade: config.grade,
+                strand: extractStrand(code),
+                description: subDescription.trim()
+              });
+            });
+          }
         }
       }
-    }
-  } else if (filePath.includes("2_MATH_SOL.py")) {
-    // Process Grade 2 format: ("strand", "code", "description", [("subcode", "subdesc")])
-    const grade2Match = fileContent.match(/grade2_standards\s*=\s*\[([\s\S]*?)\n\]/);
-    if (grade2Match) {
-      const dataStr = grade2Match[1];
-      // Match the 4-tuple format
-      const tupleRegex = /\(\s*"([^"]+)"\s*,\s*"([^"]+)"\s*,\s*"([^"]+)"\s*,\s*\[([\s\S]*?)\]\s*\)/g;
-      let match;
-      
-      while ((match = tupleRegex.exec(dataStr)) !== null) {
-        const [, strand, code, description, subStandardsStr] = match;
-        
-        // Add main standard
-        standards.push({
-          id: `${subject}-${grade}-${code}`,
-          subject: subject,
-          grade: grade,
-          strand: strand,
-          description: description
-        });
-        
-        // Extract sub-standards
-        const subStandardRegex = /\(\s*"([^"]+)"\s*,\s*"([^"]+)"\s*\)/g;
-        let subMatch;
-        while ((subMatch = subStandardRegex.exec(subStandardsStr)) !== null) {
-          const [, subCode, subDescription] = subMatch;
-          
+    } else if (config.format === "grade") {
+      // Parse grade format: ("strand", "code", "description", [("subcode", "subdesc")])
+      const match = content.match(new RegExp(`${config.variable}\\s*=\\s*\\[([\\s\\S]*?)\\n\\]`));
+      if (!match) {
+        console.log(`Could not find ${config.variable} in file`);
+        return standards;
+      }
+
+      const dataContent = match[1];
+
+      // Split by main tuples - look for patterns starting with ("
+      const tupleMatches = dataContent.split(/(?=\s*\(\s*"[^"]*"\s*,\s*"[^"]*"\s*,\s*"[^"]*"\s*,\s*\[)/).filter(part => part.trim());
+
+      for (const tupleContent of tupleMatches) {
+        const tupleMatch = tupleContent.match(/\(\s*"([^"]+)"\s*,\s*"([^"]+)"\s*,\s*"([^"]+)"\s*,\s*\[([\s\S]*?)\]\s*\)/);
+        if (tupleMatch) {
+          const [, strand, code, description, subStandardsStr] = tupleMatch;
+
+          // Add main standard
           standards.push({
-            id: `${subject}-${grade}-${subCode}`,
+            id: `${subject}-${config.grade}-${code}`,
             subject: subject,
-            grade: grade,
-            strand: strand,
-            description: subDescription
+            grade: config.grade,
+            strand: strand.trim(),
+            description: description.trim()
           });
+
+          // Extract sub-standards
+          const subTupleMatches = subStandardsStr.match(/\(\s*"([^"]+)"\s*,\s*"([^"]+)"\s*\)/g);
+          if (subTupleMatches) {
+            subTupleMatches.forEach(subTuple => {
+              const subMatch = subTuple.match(/\(\s*"([^"]+)"\s*,\s*"([^"]+)"\s*\)/);
+              if (subMatch) {
+                const [, subCode, subDescription] = subMatch;
+
+                standards.push({
+                  id: `${subject}-${config.grade}-${subCode}`,
+                  subject: subject,
+                  grade: config.grade,
+                  strand: strand.trim(),
+                  description: subDescription.trim()
+                });
+              }
+            });
+          }
         }
       }
     }
-  } else if (filePath.includes("3_MATH_SOL.py")) {
-    // Process Grade 3 format (similar to Grade 2)
-    const grade3Match = fileContent.match(/standards_data\s*=\s*\[([\s\S]*?)\n\]/);
-    if (grade3Match) {
-      const dataStr = grade3Match[1];
-      const tupleRegex = /\(\s*"([^"]+)"\s*,\s*"([^"]+)"\s*,\s*"([^"]+)"\s*,\s*\[([\s\S]*?)\]\s*\)/g;
-      let match;
-      
-      while ((match = tupleRegex.exec(dataStr)) !== null) {
-        const [, strand, code, description, subStandardsStr] = match;
-        
-        // Add main standard
-        standards.push({
-          id: `${subject}-${grade}-${code}`,
-          subject: subject,
-          grade: grade,
-          strand: strand,
-          description: description
-        });
-        
-        // Extract sub-standards
-        const subStandardRegex = /\(\s*"([^"]+)"\s*,\s*"([^"]+)"\s*\)/g;
-        let subMatch;
-        while ((subMatch = subStandardRegex.exec(subStandardsStr)) !== null) {
-          const [, subCode, subDescription] = subMatch;
-          
-          standards.push({
-            id: `${subject}-${grade}-${subCode}`,
-            subject: subject,
-            grade: grade,
-            strand: strand,
-            description: subDescription
-          });
-        }
-      }
-    }
+  } catch (error) {
+    console.error(`Error parsing ${config.file}:`, error);
   }
-  
+
   return standards;
 }
 
@@ -220,16 +177,26 @@ function extractStrand(code: string): string {
   if (code.startsWith("A.EI")) return "Equations and Inequalities";
   if (code.startsWith("A.F")) return "Functions";
   if (code.startsWith("A.ST")) return "Statistics";
+  if (code.includes(".NS.")) return "Number and Number Sense";
+  if (code.includes(".CE.")) return "Computation and Estimation";
+  if (code.includes(".MG.")) return "Measurement and Geometry";
+  if (code.includes(".PS.")) return "Probability and Statistics";
+  if (code.includes(".PFA.")) return "Patterns, Functions, and Algebra";
   return "General";
 }
 
-function extractSubStandardCode(description: string): string {
-  const match = description.match(/^([A-Z]+\.[A-Z]+\.\d+\.[a-z])/);
+function extractSubStandardCode(description: string, parentCode: string): string {
+  // Try to extract code from description like "A.EO.1.a"
+  const match = description.match(/^([A-Z]+\.[A-Z]+\.\d+\.[a-z]+)/);
   if (match) return match[1];
-  
-  // Generate a code based on the description
+
+  // Try to extract code like "2.NS.1.a"
+  const gradeMatch = description.match(/^(\d+\.[A-Z]+\.\d+\.[a-z]+)/);
+  if (gradeMatch) return gradeMatch[1];
+
+  // Generate a code based on parent + increment
   const words = description.split(' ').slice(0, 2);
-  return words.join('_').toLowerCase().replace(/[^a-z0-9_]/g, '');
+  return `${parentCode}.${words.join('_').toLowerCase().replace(/[^a-z0-9_]/g, '')}`.substring(0, 50);
 }
 
 // Run the migration if this file is executed directly
