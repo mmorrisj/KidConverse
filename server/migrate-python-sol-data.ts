@@ -26,7 +26,7 @@ async function migratePythonSolData() {
 
     for (const config of fileConfigs) {
       try {
-        const filePath = join(process.cwd(), "..", "SOL", config.file);
+        const filePath = join(process.cwd(), "SOL", config.file);
         const fileContent = readFileSync(filePath, "utf-8");
 
         const standards = parseFile(fileContent, config, "mathematics");
