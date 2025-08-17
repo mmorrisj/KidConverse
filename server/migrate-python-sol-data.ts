@@ -12,7 +12,7 @@ async function migratePythonSolData() {
     
     // Process Algebra 1 standards
     try {
-      const algebraData = await processPythonFile("SOL/ALG_MATH_SOL.py", "mathematics", "Algebra1");
+      const algebraData = await processPythonFile("../SOL/ALG_MATH_SOL.py", "mathematics", "Algebra1");
       standardsToInsert.push(...algebraData);
       console.log(`Loaded ${algebraData.length} Algebra 1 standards`);
     } catch (error) {
@@ -21,7 +21,7 @@ async function migratePythonSolData() {
     
     // Process Grade 2 standards
     try {
-      const grade2Data = await processPythonFile("SOL/2_MATH_SOL.py", "mathematics", "2");
+      const grade2Data = await processPythonFile("../SOL/2_MATH_SOL.py", "mathematics", "2");
       standardsToInsert.push(...grade2Data);
       console.log(`Loaded ${grade2Data.length} Grade 2 standards`);
     } catch (error) {
@@ -30,7 +30,7 @@ async function migratePythonSolData() {
     
     // Process Grade 3 standards
     try {
-      const grade3Data = await processPythonFile("SOL/3_MATH_SOL.py", "mathematics", "3");
+      const grade3Data = await processPythonFile("../SOL/3_MATH_SOL.py", "mathematics", "3");
       standardsToInsert.push(...grade3Data);
       console.log(`Loaded ${grade3Data.length} Grade 3 standards`);
     } catch (error) {
@@ -41,7 +41,7 @@ async function migratePythonSolData() {
     for (let grade = 1; grade <= 7; grade++) {
       if (grade === 2 || grade === 3) continue; // Already processed
       try {
-        const gradeData = await processPythonFile(`SOL/${grade}_MATH_SOL.py`, "mathematics", grade.toString());
+        const gradeData = await processPythonFile(`../SOL/${grade}_MATH_SOL.py`, "mathematics", grade.toString());
         standardsToInsert.push(...gradeData);
         console.log(`Loaded ${gradeData.length} Grade ${grade} standards`);
       } catch (error) {
@@ -58,7 +58,7 @@ async function migratePythonSolData() {
     
     for (const { file, grade } of otherFiles) {
       try {
-        const data = await processPythonFile(`SOL/${file}`, "mathematics", grade);
+        const data = await processPythonFile(`../SOL/${file}`, "mathematics", grade);
         standardsToInsert.push(...data);
         console.log(`Loaded ${data.length} ${grade} standards`);
       } catch (error) {
