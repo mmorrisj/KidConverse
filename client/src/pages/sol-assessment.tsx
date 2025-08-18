@@ -63,7 +63,18 @@ export default function SOLAssessment({ currentUser, onLogout }: SOLAssessmentPr
 
   // Fetch SOL standards for selected subject and grade
   const { data: standards = [] } = useQuery<SolStandard[]>({
-    queryKey: ["/api/sol/standards", selectedSubject, currentUser.grade],
+    queryKey: ["/api/sol/standards", { subject: selectedSubject, grade: currentUser.grade }],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (selectedSubject) params.append('subject', selectedSubject);
+      if (currentUser.grade) params.append('grade', currentUser.grade);
+      
+      const response = await fetch(`/api/sol/standards?${params.toString()}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch standards');
+      }
+      return response.json();
+    },
     enabled: !!selectedSubject,
   });
 
@@ -348,19 +359,23 @@ export default function SOLAssessment({ currentUser, onLogout }: SOLAssessmentPr
                 </div>
               </div>
 
-              {selectedSubject && standards.length > 0 && (
+              {selectedSubject && (
                 <div>
-                  <Label>Standard</Label>
+                  <Label>Standard ({standards.length} available)</Label>
                   <Select value={selectedStandard} onValueChange={setSelectedStandard}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Choose a standard" />
+                      <SelectValue placeholder={standards.length > 0 ? "Choose a standard" : "Loading standards..."} />
                     </SelectTrigger>
                     <SelectContent>
-                      {standards.map((standard) => (
-                        <SelectItem key={standard.id} value={standard.id}>
-                          {standard.id}: {standard.description.substring(0, 60)}...
-                        </SelectItem>
-                      ))}
+                      {standards.length > 0 ? (
+                        standards.map((standard) => (
+                          <SelectItem key={standard.id} value={standard.id}>
+                            {standard.id}: {standard.description.substring(0, 60)}...
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="" disabled>No standards available for Grade {currentUser.grade}</SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
