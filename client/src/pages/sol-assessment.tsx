@@ -55,11 +55,15 @@ export default function SOLAssessment({ currentUser, onLogout }: SOLAssessmentPr
   const [selectedStandard, setSelectedStandard] = useState<string>("");
   const [selectedItemType, setSelectedItemType] = useState<ItemType>("MCQ");
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>("medium");
+  const [numberOfQuestions, setNumberOfQuestions] = useState<number>(1);
   const [currentItem, setCurrentItem] = useState<AssessmentItem | null>(null);
   const [userResponse, setUserResponse] = useState<string>("");
   const [showResults, setShowResults] = useState(false);
   const [attemptResult, setAttemptResult] = useState<any>(null);
   const [startTime, setStartTime] = useState<Date | null>(null);
+  const [questionQueue, setQuestionQueue] = useState<AssessmentItem[]>([]);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
+  const [completedAttempts, setCompletedAttempts] = useState<any[]>([]);
 
   // Fetch SOL standards for selected subject and grade
   const { data: standards = [] } = useQuery<SolStandard[]>({
@@ -96,6 +100,7 @@ export default function SOLAssessment({ currentUser, onLogout }: SOLAssessmentPr
       return response.json();
     },
     onSuccess: (data) => {
+      setQuestionQueue(prev => [...prev, data]);
       setCurrentItem(data);
       setStartTime(new Date());
       setUserResponse("");
@@ -133,6 +138,7 @@ export default function SOLAssessment({ currentUser, onLogout }: SOLAssessmentPr
     onSuccess: (data) => {
       setAttemptResult(data);
       setShowResults(true);
+      setCompletedAttempts(prev => [...prev, data]);
       queryClient.invalidateQueries({ queryKey: ["/api/sol/mastery", currentUser.id] });
     },
     onError: (error) => {
@@ -150,7 +156,8 @@ export default function SOLAssessment({ currentUser, onLogout }: SOLAssessmentPr
       selectedSubject, 
       standardsLength: standards.length,
       selectedItemType,
-      selectedDifficulty 
+      selectedDifficulty,
+      numberOfQuestions
     });
     
     if (!selectedStandard) {
@@ -162,6 +169,15 @@ export default function SOLAssessment({ currentUser, onLogout }: SOLAssessmentPr
       return;
     }
 
+    // Reset state for new question set
+    setQuestionQueue([]);
+    setCurrentQuestionIndex(0);
+    setCompletedAttempts([]);
+    setCurrentItem(null);
+    setUserResponse("");
+    setShowResults(false);
+
+    // Generate first question
     generateItemMutation.mutate({
       standardId: selectedStandard,
       itemType: selectedItemType,
@@ -189,11 +205,47 @@ export default function SOLAssessment({ currentUser, onLogout }: SOLAssessmentPr
   };
 
   const handleNewQuestion = () => {
-    setCurrentItem(null);
-    setUserResponse("");
-    setShowResults(false);
-    setAttemptResult(null);
-    setStartTime(null);
+    const nextIndex = currentQuestionIndex + 1;
+    
+    if (nextIndex < numberOfQuestions && nextIndex < questionQueue.length) {
+      // Show next question from queue
+      setCurrentQuestionIndex(nextIndex);
+      setCurrentItem(questionQueue[nextIndex]);
+      setUserResponse("");
+      setShowResults(false);
+      setAttemptResult(null);
+      setStartTime(new Date());
+    } else if (nextIndex < numberOfQuestions) {
+      // Generate next question
+      setCurrentQuestionIndex(nextIndex);
+      generateItemMutation.mutate({
+        standardId: selectedStandard,
+        itemType: selectedItemType,
+        difficulty: selectedDifficulty,
+      });
+      setUserResponse("");
+      setShowResults(false);
+      setAttemptResult(null);
+    } else {
+      // Completed all questions - show summary or reset
+      if (completedAttempts.length > 1) {
+        // Show summary view (implement later)
+        setCurrentItem(null);
+        setShowResults(false);
+        setAttemptResult(null);
+        setStartTime(null);
+      } else {
+        // Reset for new set
+        setCurrentItem(null);
+        setUserResponse("");
+        setShowResults(false);
+        setAttemptResult(null);
+        setStartTime(null);
+        setQuestionQueue([]);
+        setCurrentQuestionIndex(0);
+        setCompletedAttempts([]);
+      }
+    }
   };
 
   const renderQuestionContent = () => {
@@ -205,7 +257,14 @@ export default function SOLAssessment({ currentUser, onLogout }: SOLAssessmentPr
       <Card className="mb-6">
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle className="text-lg">Assessment Question</CardTitle>
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-lg">Assessment Question</CardTitle>
+              {numberOfQuestions > 1 && (
+                <Badge variant="secondary">
+                  {currentQuestionIndex + 1} of {numberOfQuestions}
+                </Badge>
+              )}
+            </div>
             <div className="flex gap-2">
               <Badge variant="outline">{currentItem.itemType}</Badge>
               <Badge variant="outline">{currentItem.difficulty}</Badge>
@@ -298,9 +357,17 @@ export default function SOLAssessment({ currentUser, onLogout }: SOLAssessmentPr
                 </div>
               )}
 
-              <Button onClick={handleNewQuestion} variant="outline" className="w-full">
-                Try Another Question
-              </Button>
+              <div className="flex gap-2">
+                {currentQuestionIndex + 1 < numberOfQuestions ? (
+                  <Button onClick={handleNewQuestion} className="flex-1">
+                    Next Question ({currentQuestionIndex + 2} of {numberOfQuestions})
+                  </Button>
+                ) : (
+                  <Button onClick={handleNewQuestion} variant="outline" className="flex-1">
+                    {completedAttempts.length > 1 ? "View Summary" : "Try Another Set"}
+                  </Button>
+                )}
+              </div>
             </div>
           )}
         </CardContent>
@@ -381,18 +448,36 @@ export default function SOLAssessment({ currentUser, onLogout }: SOLAssessmentPr
                 </div>
               )}
 
-              <div>
-                <Label>Difficulty</Label>
-                <Select value={selectedDifficulty} onValueChange={setSelectedDifficulty}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="easy">Easy</SelectItem>
-                    <SelectItem value="medium">Medium</SelectItem>
-                    <SelectItem value="hard">Hard</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label>Difficulty</Label>
+                  <Select value={selectedDifficulty} onValueChange={setSelectedDifficulty}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="easy">Easy</SelectItem>
+                      <SelectItem value="medium">Medium</SelectItem>
+                      <SelectItem value="hard">Hard</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label>Number of Questions</Label>
+                  <Select value={numberOfQuestions.toString()} onValueChange={(value) => setNumberOfQuestions(parseInt(value))}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">1 Question</SelectItem>
+                      <SelectItem value="2">2 Questions</SelectItem>
+                      <SelectItem value="3">3 Questions</SelectItem>
+                      <SelectItem value="5">5 Questions</SelectItem>
+                      <SelectItem value="10">10 Questions</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
               <Button
@@ -407,6 +492,49 @@ export default function SOLAssessment({ currentUser, onLogout }: SOLAssessmentPr
         )}
 
         {renderQuestionContent()}
+
+        {!currentItem && completedAttempts.length > 1 && (
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>Assessment Summary</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                  <div className="text-center p-4 bg-blue-50 rounded-lg">
+                    <div className="text-2xl font-bold text-blue-600">
+                      {completedAttempts.filter(a => a.is_correct).length}
+                    </div>
+                    <div className="text-sm text-blue-600">Correct</div>
+                  </div>
+                  <div className="text-center p-4 bg-gray-50 rounded-lg">
+                    <div className="text-2xl font-bold text-gray-600">
+                      {completedAttempts.length}
+                    </div>
+                    <div className="text-sm text-gray-600">Total</div>
+                  </div>
+                  <div className="text-center p-4 bg-green-50 rounded-lg">
+                    <div className="text-2xl font-bold text-green-600">
+                      {Math.round((completedAttempts.filter(a => a.is_correct).length / completedAttempts.length) * 100)}%
+                    </div>
+                    <div className="text-sm text-green-600">Score</div>
+                  </div>
+                </div>
+                
+                <Button 
+                  onClick={() => {
+                    setQuestionQueue([]);
+                    setCurrentQuestionIndex(0);
+                    setCompletedAttempts([]);
+                  }} 
+                  className="w-full"
+                >
+                  Start New Assessment
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
         </div>
         </div>
       </div>
