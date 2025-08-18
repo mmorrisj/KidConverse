@@ -38,7 +38,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const user = await orm.User.create(userData);
+      const user = await orm.User.create({
+        ...userData,
+        createdAt: new Date()
+      });
       res.json(user);
     } catch (error: any) {
       console.error("Registration error:", error);

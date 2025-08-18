@@ -374,7 +374,7 @@ export default function SOLAssessment({ currentUser, onLogout }: SOLAssessmentPr
                           </SelectItem>
                         ))
                       ) : (
-                        <SelectItem value="" disabled>No standards available for Grade {currentUser.grade}</SelectItem>
+                        <SelectItem value="no-standards" disabled>No standards available for Grade {currentUser.grade}</SelectItem>
                       )}
                     </SelectContent>
                   </Select>
