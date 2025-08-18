@@ -134,6 +134,14 @@ export default function SOLAssessment({ currentUser, onLogout }: SOLAssessmentPr
   });
 
   const handleGenerateItem = () => {
+    console.log("Generate button clicked", { 
+      selectedStandard, 
+      selectedSubject, 
+      standardsLength: standards.length,
+      selectedItemType,
+      selectedDifficulty 
+    });
+    
     if (!selectedStandard) {
       toast({
         title: "Error",
@@ -350,12 +358,7 @@ export default function SOLAssessment({ currentUser, onLogout }: SOLAssessmentPr
                     <SelectContent>
                       {standards.map((standard) => (
                         <SelectItem key={standard.id} value={standard.id}>
-                          <div className="flex flex-col items-start">
-                            <span className="font-medium">{standard.id}</span>
-                            <span className="text-sm text-gray-500 truncate max-w-xs">
-                              {standard.description}
-                            </span>
-                          </div>
+                          {standard.id}: {standard.description.substring(0, 60)}...
                         </SelectItem>
                       ))}
                     </SelectContent>
