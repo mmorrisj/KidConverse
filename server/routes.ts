@@ -354,14 +354,22 @@ Format your response as a complete question that I can ask directly to the stude
 
   // ===== SOL ASSESSMENT ROUTES =====
   
-  // Get SOL Standards with optional filtering
+  // Get SOL Standards with optional filtering (using ORM)
   app.get("/api/sol/standards", async (req, res) => {
     try {
       const { subject, grade } = req.query;
-      const standards = await storage.getSolStandards(
-        subject as string, 
-        grade as string
-      );
+      let standards;
+      
+      if (subject && grade) {
+        standards = await orm.SolStandard.findBySubjectAndGrade(subject as string, grade as string);
+      } else if (subject) {
+        standards = await orm.SolStandard.findBySubject(subject as string);
+      } else if (grade) {
+        standards = await orm.SolStandard.findByGrade(grade as string);
+      } else {
+        standards = await orm.SolStandard.findAll();
+      }
+      
       res.json(standards);
     } catch (error) {
       console.error("Error fetching SOL standards:", error);
@@ -369,10 +377,10 @@ Format your response as a complete question that I can ask directly to the stude
     }
   });
 
-  // Get specific SOL standard
+  // Get specific SOL standard (using ORM)
   app.get("/api/sol/standards/:id", async (req, res) => {
     try {
-      const standard = await storage.getSolStandardById(req.params.id);
+      const standard = await orm.SolStandard.findById(req.params.id);
       if (!standard) {
         return res.status(404).json({ message: "Standard not found" });
       }
@@ -397,14 +405,14 @@ Format your response as a complete question that I can ask directly to the stude
         return res.status(400).json({ message: "Missing required fields: standardId, itemType, userId" });
       }
 
-      // Get the SOL standard
-      const standard = await storage.getSolStandardById(standardId);
+      // Get the SOL standard (using ORM)
+      const standard = await orm.SolStandard.findById(standardId);
       if (!standard) {
         return res.status(404).json({ message: "Standard not found" });
       }
 
-      // Get user for grade-appropriate content
-      const user = await storage.getUser(userId);
+      // Get user for grade-appropriate content (using ORM)
+      const user = await orm.User.findById(userId);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
@@ -492,8 +500,8 @@ Response format must be valid JSON matching this structure:`;
         return res.status(500).json({ message: "Failed to parse generated question" });
       }
 
-      // Create assessment item record
-      const assessmentItem = await storage.createAssessmentItem({
+      // Create assessment item record (using ORM)
+      const assessmentItem = await orm.AssessmentItem.create({
         solId: standardId,
         itemType: itemType,
         difficulty: difficulty || 'medium',
@@ -532,10 +540,10 @@ Response format must be valid JSON matching this structure:`;
         return res.status(400).json({ message: "Missing required fields: itemId, userId, response" });
       }
 
-      // Get the assessment item and user
+      // Get the assessment item and user (using ORM)
       const [item, user] = await Promise.all([
-        storage.getAssessmentItem(itemId),
-        storage.getUser(userId)
+        orm.AssessmentItem.findById(itemId),
+        orm.User.findById(userId)
       ]);
 
       if (!item || !user) {
@@ -619,8 +627,8 @@ Provide a score from 1-4 and brief feedback. Respond with JSON:
         }
       }
 
-      // Create assessment attempt record
-      const attempt = await storage.createAssessmentAttempt({
+      // Create assessment attempt record (using ORM)
+      const attempt = await orm.AssessmentAttempt.create({
         itemId: itemId,
         userId: userId,
         solId: item.solId,
@@ -649,10 +657,10 @@ Provide a score from 1-4 and brief feedback. Respond with JSON:
     }
   });
 
-  // Get user mastery data
+  // Get user mastery data (using ORM)
   app.get("/api/sol/mastery/:userId", async (req, res) => {
     try {
-      const mastery = await storage.getMasteryByUser(req.params.userId);
+      const mastery = await orm.AssessmentAttempt.getUserMastery(req.params.userId);
       res.json(mastery);
     } catch (error) {
       console.error("Error fetching mastery data:", error);
