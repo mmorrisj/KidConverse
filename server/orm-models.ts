@@ -19,7 +19,7 @@ export class UserModel extends BaseModel {
   }
   
   static async findById(id: string): Promise<User | null> {
-    return this.storage.getUserById(id);
+    return this.storage.getUser(id);
   }
   
   static async findAll(): Promise<User[]> {
@@ -27,16 +27,19 @@ export class UserModel extends BaseModel {
   }
   
   static async update(id: string, data: Partial<User>): Promise<User | null> {
-    return this.storage.updateUser(id, data);
+    // Note: updateUser method doesn't exist in storage interface
+    // This would need to be implemented or use a different approach
+    throw new Error('updateUser method not implemented in storage');
   }
   
   static async delete(id: string): Promise<boolean> {
-    return this.storage.deleteUser(id);
+    // Note: deleteUser method doesn't exist in storage interface
+    // This would need to be implemented or use a different approach
+    throw new Error('deleteUser method not implemented in storage');
   }
   
   static async findByEmail(email: string): Promise<User | null> {
-    const users = await this.findAll();
-    return users.find(user => user.email === email) || null;
+    return this.storage.getUserByEmail(email) || null;
   }
   
   static async findByGrade(grade: string): Promise<User[]> {
@@ -51,7 +54,7 @@ export class ChatModel extends BaseModel {
   }
   
   static async findById(id: string): Promise<Chat | null> {
-    return this.storage.getChatById(id);
+    return this.storage.getChat(id);
   }
   
   static async findByUserId(userId: string): Promise<Chat[]> {
@@ -78,11 +81,12 @@ export class MessageModel extends BaseModel {
   }
   
   static async findByChatId(chatId: string): Promise<Message[]> {
-    return this.storage.getMessagesByChatId(chatId);
+    return this.storage.getMessages(chatId);
   }
   
   static async delete(id: string): Promise<boolean> {
-    return this.storage.deleteMessage(id);
+    // Note: deleteMessage method doesn't exist in storage interface
+    throw new Error('deleteMessage method not implemented in storage');
   }
   
   static async findByRole(chatId: string, role: 'user' | 'assistant'): Promise<Message[]> {
@@ -91,7 +95,7 @@ export class MessageModel extends BaseModel {
   }
   
   static async getConversationHistory(chatId: string): Promise<Array<{role: string; content: string}>> {
-    const messages = await this.findByChatId(chatId);
+    const messages = await this.storage.getMessages(chatId);
     return messages.map(msg => ({
       role: msg.role,
       content: msg.content
@@ -109,11 +113,11 @@ export class SolStandardModel extends BaseModel {
   }
   
   static async findBySubjectAndGrade(subject: string, grade: string): Promise<SolStandard[]> {
-    return this.storage.getSolStandardsBySubjectGrade(subject, grade);
+    return this.storage.getSolStandards(subject, grade);
   }
   
   static async findAll(): Promise<SolStandard[]> {
-    return this.storage.getAllSolStandards();
+    return this.storage.getSolStandards();
   }
   
   static async findBySubject(subject: string): Promise<SolStandard[]> {
@@ -156,7 +160,7 @@ export class AssessmentItemModel extends BaseModel {
   }
   
   static async findById(id: string): Promise<AssessmentItem | null> {
-    return this.storage.getAssessmentItemById(id);
+    return this.storage.getAssessmentItem(id);
   }
   
   static async findBySolId(solId: string): Promise<AssessmentItem[]> {
@@ -197,8 +201,7 @@ export class AssessmentAttemptModel extends BaseModel {
   }
   
   static async findByUserId(userId: string): Promise<AssessmentAttempt[]> {
-    // This would need to be implemented in the storage layer
-    return [];
+    return this.storage.getAssessmentAttemptsByUser(userId);
   }
   
   static async findByItemId(itemId: string): Promise<AssessmentAttempt[]> {
@@ -212,7 +215,7 @@ export class AssessmentAttemptModel extends BaseModel {
   }
   
   static async getUserMastery(userId: string): Promise<any> {
-    return this.storage.getUserMasteryData(userId);
+    return this.storage.getMasteryByUser(userId);
   }
   
   static async calculateEWMA(attempts: AssessmentAttempt[], alpha: number = 0.3): Promise<number> {
