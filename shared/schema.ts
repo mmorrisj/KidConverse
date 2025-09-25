@@ -64,7 +64,7 @@ export const solStandards = pgTable("sol_standards", {
   strand: text("strand").notNull(),
   title: text("title"), // Short title/summary
   description: text("description").notNull(),
-  metadata: json("metadata"), // Enhanced data: sub-objectives, prerequisites, connections, etc.
+  sol_metadata: json("sol_metadata"), // Enhanced data: sub-objectives, prerequisites, connections, etc.
   createdAt: timestamp("created_at").defaultNow(),
 });
 

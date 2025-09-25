@@ -59,17 +59,23 @@ class Message(Base):
 
 class SolStandard(Base):
     __tablename__ = 'sol_standards'
-    
+
     id = Column(String, primary_key=True)
+    standard_code = Column(String, nullable=False)  # e.g., "3.NS.1", "ALG.A.1"
     subject = Column(String, nullable=False)
     grade = Column(String, nullable=False)
     strand = Column(String, nullable=False)
+    title = Column(String, nullable=True)  # Short title/summary
     description = Column(Text, nullable=False)
+    sol_metadata = Column(JSON, nullable=True)  # Enhanced data: sub-objectives, prerequisites, etc.
     created_at = Column(DateTime, server_default=func.now())
-    
+
     # Relationships
     assessment_items = relationship("AssessmentItem", back_populates="sol_standard")
     assessment_attempts = relationship("AssessmentAttempt", back_populates="sol_standard")
+
+    def __repr__(self):
+        return f"<SolStandard(id='{self.id}', code='{self.standard_code}', grade='{self.grade}')>"
 
 
 class AssessmentItem(Base):
@@ -147,5 +153,5 @@ class DatabaseManager:
         Base.metadata.drop_all(bind=self.engine)
 
 
-# Initialize database manager
-db_manager = DatabaseManager()
+# Database manager can be initialized when needed:
+# db_manager = DatabaseManager(database_url="your_url_here")
