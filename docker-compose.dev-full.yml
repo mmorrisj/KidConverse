@@ -1,0 +1,69 @@
+version: "3.8"
+
+services:
+  postgres-dev:
+    image: postgres:15-alpine
+    container_name: studybuddy-postgres-dev
+    environment:
+      POSTGRES_USER: "devuser"
+      POSTGRES_PASSWORD: "devpassword"
+      POSTGRES_DB: "studybuddy_dev"
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata_dev:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d/
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U devuser -d studybuddy_dev"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  studybuddy-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: studybuddy-app-dev
+    ports:
+      - "5001:5000"  # Map to different port than production
+    environment:
+      NODE_ENV: "development"
+      PORT: "5000"
+      PGHOST: "postgres-dev"   # Connect to dev database
+      PGPORT: "5432"
+      PGUSER: "devuser"
+      PGPASSWORD: "devpassword"
+      PGDATABASE: "studybuddy_dev"
+      DATABASE_URL: "postgresql://devuser:devpassword@postgres-dev:5432/studybuddy_dev"
+      OPENAI_API_KEY: "${OPENAI_API_KEY}"
+      ENABLE_WEBSOCKET: "false"
+    depends_on:
+      postgres-dev:
+        condition: service_healthy
+    restart: unless-stopped
+    volumes:
+      # Mount source code for hot reloading in development
+      - .:/app
+      - /app/node_modules
+    command: npm run dev
+
+  # Optional: pgAdmin for database management
+  pgadmin-dev:
+    image: dpage/pgadmin4:latest
+    container_name: studybuddy-pgadmin-dev
+    environment:
+      PGADMIN_DEFAULT_EMAIL: "dev@studybuddy.com"
+      PGADMIN_DEFAULT_PASSWORD: "devpassword"
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+    ports:
+      - "8080:80"
+    depends_on:
+      - postgres-dev
+    restart: unless-stopped
+    profiles:
+      - admin
+
+volumes:
+  pgdata_dev:
+    name: studybuddy_pgdata_dev

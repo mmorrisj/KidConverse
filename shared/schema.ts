@@ -9,6 +9,7 @@ export const users = pgTable("users", {
   email: text("email").notNull().unique(),
   age: integer("age").notNull(),
   grade: text("grade").notNull(),
+  password: text("password"),
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
 });
 
@@ -32,6 +33,7 @@ export const messages = pgTable("messages", {
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   createdAt: true,
+  password: true,
 }).extend({
   age: z.number().min(5).max(12),
   grade: z.enum(["K", "1", "2", "3", "4", "5", "6", "7"]),

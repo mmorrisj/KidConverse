@@ -28,25 +28,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // User registration endpoint
   app.post("/api/users/register", async (req, res) => {
     try {
+      console.log("Registration request body:", req.body);
       const userData = insertUserSchema.parse(req.body);
-      
+      console.log("Parsed user data:", userData);
+
       // Check if user already exists (using ORM)
       const existingUser = await orm.User.findByEmail(userData.email);
+      console.log("Existing user found:", existingUser ? "yes" : "no");
       if (existingUser) {
-        return res.status(400).json({ 
-          message: "A user with this email already exists. Please use a different email." 
+        return res.status(400).json({
+          message: "A user with this email already exists. Please use a different email."
         });
       }
 
+      console.log("Creating user with data:", { ...userData, createdAt: new Date() });
       const user = await orm.User.create({
         ...userData,
         createdAt: new Date()
       });
+      console.log("User created successfully:", user);
       res.json(user);
     } catch (error: any) {
-      console.error("Registration error:", error);
-      res.status(400).json({ 
-        message: error.message || "Registration failed. Please check your information and try again." 
+      console.error("Registration error - Full error:", error);
+      console.error("Registration error - Stack:", error.stack);
+      console.error("Registration error - Message:", error.message);
+
+      if (error.name === 'ZodError') {
+        console.error("Zod validation errors:", error.errors);
+        return res.status(400).json({
+          message: "Invalid user data",
+          details: error.errors
+        });
+      }
+
+      res.status(400).json({
+        message: error.message || "Registration failed. Please check your information and try again.",
+        error: error.toString()
       });
     }
   });
