@@ -58,10 +58,13 @@ export type Message = typeof messages.$inferSelect;
 // SOL Assessment Tables
 export const solStandards = pgTable("sol_standards", {
   id: text("id").primaryKey(),
+  standardCode: text("standard_code").notNull(), // e.g., "3.NS.1", "ALG.A.1"
   subject: text("subject").notNull(),
   grade: text("grade").notNull(),
   strand: text("strand").notNull(),
+  title: text("title"), // Short title/summary
   description: text("description").notNull(),
+  metadata: json("metadata"), // Enhanced data: sub-objectives, prerequisites, connections, etc.
   createdAt: timestamp("created_at").defaultNow(),
 });
 
