@@ -141,7 +141,7 @@ python sol_cli.py setup-db
 
 ### Intelligent Extraction
 
-The system uses GPT-4 to intelligently extract:
+The system uses GPT-4o Mini to intelligently extract:
 
 - **Standard Codes**: Automatically identifies SOL codes (e.g., "3.NS.1")
 - **Content Strands**: Maps to educational domains
@@ -153,7 +153,7 @@ The system uses GPT-4 to intelligently extract:
 ### Processing Pipeline
 
 1. **Document Parsing**: Extract raw text from .docx files
-2. **AI Analysis**: Send to GPT-4 with structured prompt
+2. **AI Analysis**: Send to GPT-4o Mini with structured prompt
 3. **Data Validation**: Validate against Pydantic schemas
 4. **Database Storage**: Save to PostgreSQL with relationships
 5. **Index Creation**: Optimize for query performance

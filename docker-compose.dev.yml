@@ -1,0 +1,42 @@
+version: "3.8"
+
+services:
+  postgres-dev:
+    image: postgres:15-alpine
+    container_name: studybuddy-postgres-dev
+    environment:
+      POSTGRES_USER: "devuser"
+      POSTGRES_PASSWORD: "devpassword"
+      POSTGRES_DB: "studybuddy_dev"
+    ports:
+      - "5433:5432"  # Different port to avoid conflicts with production
+    volumes:
+      - pgdata_dev:/var/lib/postgresql/data
+      # Mount init scripts for SOL data
+      - ./database/init:/docker-entrypoint-initdb.d/
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U devuser -d studybuddy_dev"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  # Optional: pgAdmin for database management
+  pgadmin-dev:
+    image: dpage/pgadmin4:latest
+    container_name: studybuddy-pgadmin-dev
+    environment:
+      PGADMIN_DEFAULT_EMAIL: "dev@studybuddy.com"
+      PGADMIN_DEFAULT_PASSWORD: "devpassword"
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+    ports:
+      - "8080:80"
+    depends_on:
+      - postgres-dev
+    restart: unless-stopped
+    profiles:
+      - admin  # Only start with --profile admin
+
+volumes:
+  pgdata_dev:
+    name: studybuddy_pgdata_dev  # Separate volume for dev data

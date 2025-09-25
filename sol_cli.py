@@ -97,7 +97,7 @@ def process_file(ctx, file_path: str, output: Optional[str], dry_run: bool):
                 rprint(f"     {std.description[:100]}...")
 
     except Exception as e:
-        rprint(f"❌ Error processing file: {e}", style="red")
+        rprint(f"[red]❌ Error processing file: {e}[/red]")
         if ctx.obj['verbose']:
             import traceback
             traceback.print_exc()
@@ -165,7 +165,7 @@ def process_directory(ctx, directory_path: str, pattern: str, output_dir: Option
                     time.sleep(1)
 
                 except Exception as e:
-                    rprint(f"❌ Failed to process {file_path.name}: {e}", style="red")
+                    rprint(f"[red]❌ Failed to process {file_path.name}: {e}[/red]")
 
                 progress.advance(task)
 
@@ -174,7 +174,7 @@ def process_directory(ctx, directory_path: str, pattern: str, output_dir: Option
         rprint(f"  • Total standards saved: {total_saved}")
 
     except Exception as e:
-        rprint(f"❌ Batch processing failed: {e}", style="red")
+        rprint(f"[red]❌ Batch processing failed: {e}[/red]")
         sys.exit(1)
 
 
@@ -184,9 +184,12 @@ def validate(ctx):
     """Validate and show statistics for SOL data in database"""
 
     try:
+        # For validation, we don't need OpenAI, so use a dummy key if not provided
+        openai_key = ctx.obj['openai_key'] or 'dummy-key-for-validation'
+
         processor = SOLProcessor(
             database_url=ctx.obj['database_url'],
-            openai_api_key=ctx.obj['openai_key']
+            openai_api_key=openai_key
         )
 
         stats = processor.get_database_stats()
@@ -209,7 +212,7 @@ def validate(ctx):
             rprint("No standards found in database")
 
     except Exception as e:
-        rprint(f"❌ Database validation failed: {e}", style="red")
+        rprint(f"[red]❌ Database validation failed: {e}[/red]")
         sys.exit(1)
 
 
@@ -253,7 +256,7 @@ def query(ctx, subject: str, grade: str, limit: int):
         session.close()
 
     except Exception as e:
-        rprint(f"❌ Query failed: {e}", style="red")
+        rprint(f"[red]❌ Query failed: {e}[/red]")
         sys.exit(1)
 
 
@@ -272,7 +275,7 @@ def setup_db(ctx):
         rprint("✅ Database tables created successfully")
 
     except Exception as e:
-        rprint(f"❌ Database setup failed: {e}", style="red")
+        rprint(f"[red]❌ Database setup failed: {e}[/red]")
         sys.exit(1)
 
 

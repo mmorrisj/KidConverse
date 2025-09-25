@@ -85,8 +85,6 @@ class SOLProcessor:
         if not self.openai_api_key:
             raise ValueError("OpenAI API key is required. Set OPENAI_API_KEY environment variable.")
 
-        openai.api_key = self.openai_api_key
-
         # Set up database
         self.database_url = database_url or os.getenv('DATABASE_URL')
         if not self.database_url:
@@ -180,9 +178,9 @@ IMPORTANT EXTRACTION RULES:
 5. Map content to appropriate strands (Number Sense, Geometry, etc.)
 6. Extract key vocabulary and terms mentioned
 7. Identify cognitive complexity based on verbs used (remember=recall, apply=skill, analyze=strategic, create=extended)
-8. Return valid JSON only - no additional text or markdown
+8. Return ONLY valid JSON - no markdown, no explanations, no additional text
 
-Focus on accuracy and completeness. If unsure about a field, use reasonable defaults based on context.
+CRITICAL: Your response must be pure JSON that starts with {{ and ends with }}. Do not include ```json or any other formatting.
 """
 
     def process_sol_document(self, document_text: str, file_name: str) -> SOLDocumentData:
@@ -198,8 +196,11 @@ Focus on accuracy and completeness. If unsure about a field, use reasonable defa
         prompt = self.create_sol_extraction_prompt(document_text, file_name)
 
         try:
-            response = openai.ChatCompletion.create(
-                model="gpt-4",
+            from openai import OpenAI
+            client = OpenAI(api_key=self.openai_api_key)
+
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
                 messages=[
                     {
                         "role": "system",
@@ -217,8 +218,26 @@ Focus on accuracy and completeness. If unsure about a field, use reasonable defa
             response_text = response.choices[0].message.content
             logger.info(f"GPT-4 response received: {len(response_text)} characters")
 
-            # Parse JSON response
-            parsed_data = json.loads(response_text)
+            # Clean and parse JSON response
+            if not response_text or response_text.strip() == "":
+                raise ValueError("Empty response from OpenAI")
+
+            # Remove any markdown formatting or extra text
+            response_text = response_text.strip()
+            if response_text.startswith('```json'):
+                response_text = response_text[7:]
+            if response_text.endswith('```'):
+                response_text = response_text[:-3]
+            response_text = response_text.strip()
+
+            # Debug log the response
+            logger.debug(f"Cleaned response: {response_text[:200]}...")
+
+            try:
+                parsed_data = json.loads(response_text)
+            except json.JSONDecodeError as e:
+                logger.error(f"JSON parsing failed. Response was: {response_text[:500]}...")
+                raise ValueError(f"Invalid JSON response from OpenAI: {e}")
 
             # Convert to our data structures
             standards_list = []
