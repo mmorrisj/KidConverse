@@ -1,5 +1,9 @@
 version: '3.8'
 
+# Standard Docker volume configuration (alternative to bind mount)
+# Use this if you prefer Docker-managed volumes over bind mounts
+# To use: docker-compose -f docker-compose.standard.yml up -d
+
 services:
   studybuddy:
     build: .
@@ -38,8 +42,4 @@ services:
 
 volumes:
   postgres_data:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: /home/pi/studybuddy/postgres-data
+    # Docker-managed volume (stored in /var/lib/docker/volumes/)

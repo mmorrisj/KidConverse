@@ -1,0 +1,355 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StudyBuddy AI - Safe Learning Chat</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'study-blue': '#3B82F6',
+                        'study-green': '#10B981',
+                        'study-orange': '#F59E0B',
+                        'chat-bg': '#F8FAFC',
+                        'user-msg': '#EBF8FF',
+                        'ai-msg': '#F0FDF4'
+                    },
+                    fontFamily: {
+                        'sans': ['Inter', 'system-ui', 'sans-serif']
+                    }
+                }
+            }
+        };
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-chat-bg font-sans">
+    <!-- @COMPONENT: AppLayout [main container] -->
+    <div class="flex h-screen bg-chat-bg">
+        
+        <!-- @COMPONENT: Sidebar [chat history and navigation] -->
+        <aside class="w-80 bg-white border-r border-gray-200 flex flex-col" id="sidebar">
+            <!-- Header -->
+            <div class="p-6 border-b border-gray-200">
+                <div class="flex items-center space-x-3 mb-4">
+                    <div class="w-10 h-10 bg-study-blue rounded-xl flex items-center justify-center">
+                        <i class="fas fa-robot text-white text-lg"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold text-gray-900">StudyBuddy AI</h1>
+                        <p class="text-sm text-gray-500">Safe Learning Assistant</p>
+                    </div>
+                </div>
+                
+                <!-- New Chat Button -->
+                <button class="w-full bg-study-blue hover:bg-blue-600 text-white font-medium py-3 px-4 rounded-xl transition-colors duration-200 flex items-center justify-center space-x-2" data-event="click:createNewChat">
+                    <i class="fas fa-plus"></i>
+                    <span>New Chat</span>
+                </button>
+            </div>
+
+            <!-- Chat History -->
+            <div class="flex-1 overflow-y-auto p-4">
+                <h2 class="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Recent Chats</h2>
+                
+                <!-- @MAP: chatHistory.map(chat => ( -->
+                <div class="space-y-2">
+                    <div class="p-3 rounded-lg hover:bg-gray-50 cursor-pointer border border-transparent hover:border-gray-200 transition-all duration-200" data-mock="true" data-event="click:loadChat">
+                        <div class="flex items-start space-x-3">
+                            <i class="fas fa-comments text-study-green mt-1"></i>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-medium text-gray-900 truncate">Math Homework Help</p>
+                                <p class="text-xs text-gray-500 mt-1">Yesterday</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="p-3 rounded-lg hover:bg-gray-50 cursor-pointer border border-transparent hover:border-gray-200 transition-all duration-200" data-mock="true" data-event="click:loadChat">
+                        <div class="flex items-start space-x-3">
+                            <i class="fas fa-comments text-study-green mt-1"></i>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-medium text-gray-900 truncate">Science Questions</p>
+                                <p class="text-xs text-gray-500 mt-1">2 days ago</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="p-3 rounded-lg hover:bg-gray-50 cursor-pointer border border-transparent hover:border-gray-200 transition-all duration-200" data-mock="true" data-event="click:loadChat">
+                        <div class="flex items-start space-x-3">
+                            <i class="fas fa-comments text-study-green mt-1"></i>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-medium text-gray-900 truncate">Reading Comprehension</p>
+                                <p class="text-xs text-gray-500 mt-1">3 days ago</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="p-3 rounded-lg hover:bg-gray-50 cursor-pointer border border-transparent hover:border-gray-200 transition-all duration-200" data-mock="true" data-event="click:loadChat">
+                        <div class="flex items-start space-x-3">
+                            <i class="fas fa-comments text-study-green mt-1"></i>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-medium text-gray-900 truncate">History Project</p>
+                                <p class="text-xs text-gray-500 mt-1">1 week ago</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- @END_MAP )) -->
+            </div>
+
+            <!-- Safety Notice -->
+            <div class="p-4 border-t border-gray-200">
+                <div class="bg-green-50 border border-green-200 rounded-lg p-3">
+                    <div class="flex items-start space-x-2">
+                        <i class="fas fa-shield-alt text-green-600 mt-0.5"></i>
+                        <div>
+                            <p class="text-xs font-medium text-green-800">Safe Learning</p>
+                            <p class="text-xs text-green-700 mt-1">All conversations are monitored for safety</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+        <!-- @END_COMPONENT: Sidebar -->
+
+        <!-- @COMPONENT: MainChatArea [chat interface] -->
+        <main class="flex-1 flex flex-col">
+            <!-- Chat Header -->
+            <header class="bg-white border-b border-gray-200 p-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <button class="lg:hidden p-2 rounded-lg hover:bg-gray-100" data-event="click:toggleSidebar">
+                            <i class="fas fa-bars text-gray-600"></i>
+                        </button>
+                        <div class="flex items-center space-x-3">
+                            <div class="w-8 h-8 bg-study-green rounded-full flex items-center justify-center">
+                                <i class="fas fa-robot text-white text-sm"></i>
+                            </div>
+                            <div>
+                                <h2 class="font-semibold text-gray-900" data-bind="currentChat.title">Math Homework Help</h2>
+                                <div class="flex items-center space-x-2">
+                                    <div class="w-2 h-2 bg-green-400 rounded-full"></div>
+                                    <span class="text-sm text-gray-500">Online & Ready to Help</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center space-x-2">
+                        <button class="p-2 rounded-lg hover:bg-gray-100 text-gray-600" data-event="click:clearChat" title="Clear Chat">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                        <button class="p-2 rounded-lg hover:bg-gray-100 text-gray-600" data-event="click:exportChat" title="Save Chat">
+                            <i class="fas fa-download"></i>
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Chat Messages -->
+            <!-- @STATE: messages:array = [], isLoading:boolean = false -->
+            <div class="flex-1 overflow-y-auto p-6 space-y-6" id="chatMessages">
+                
+                <!-- Welcome Message -->
+                <div class="flex items-start space-x-4" data-mock="true">
+                    <div class="w-10 h-10 bg-study-green rounded-full flex items-center justify-center flex-shrink-0">
+                        <i class="fas fa-robot text-white"></i>
+                    </div>
+                    <div class="flex-1">
+                        <div class="bg-ai-msg border border-green-200 rounded-2xl rounded-tl-md p-4 max-w-3xl">
+                            <p class="text-gray-800 text-base leading-relaxed">
+                                Hi there! 👋 I'm StudyBuddy, your friendly AI learning assistant. I'm here to help you with your homework and answer any questions you have about school subjects. What would you like to learn about today?
+                            </p>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-2">StudyBuddy • just now</p>
+                    </div>
+                </div>
+
+                <!-- User Message -->
+                <div class="flex items-start space-x-4 flex-row-reverse" data-mock="true">
+                    <div class="w-10 h-10 bg-study-blue rounded-full flex items-center justify-center flex-shrink-0">
+                        <i class="fas fa-user text-white"></i>
+                    </div>
+                    <div class="flex-1">
+                        <div class="bg-user-msg border border-blue-200 rounded-2xl rounded-tr-md p-4 max-w-3xl ml-auto">
+                            <p class="text-gray-800 text-base leading-relaxed">
+                                Can you help me understand fractions? I'm having trouble with adding fractions that have different denominators.
+                            </p>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-2 text-right">You • 2 minutes ago</p>
+                    </div>
+                </div>
+
+                <!-- AI Response -->
+                <div class="flex items-start space-x-4" data-mock="true">
+                    <div class="w-10 h-10 bg-study-green rounded-full flex items-center justify-center flex-shrink-0">
+                        <i class="fas fa-robot text-white"></i>
+                    </div>
+                    <div class="flex-1">
+                        <div class="bg-ai-msg border border-green-200 rounded-2xl rounded-tl-md p-4 max-w-3xl">
+                            <p class="text-gray-800 text-base leading-relaxed mb-4">
+                                Great question! Adding fractions with different denominators is like trying to add apples and oranges - we need to make them the same type first! 🍎🍊
+                            </p>
+                            <p class="text-gray-800 text-base leading-relaxed mb-4">
+                                Here's how to do it step by step:
+                            </p>
+                            <ol class="list-decimal list-inside space-y-2 text-gray-800 text-base">
+                                <li><strong>Find a common denominator</strong> - This is usually the least common multiple of both denominators</li>
+                                <li><strong>Convert both fractions</strong> to have this common denominator</li>
+                                <li><strong>Add the numerators</strong> and keep the denominator the same</li>
+                                <li><strong>Simplify</strong> if possible</li>
+                            </ol>
+                            <p class="text-gray-800 text-base leading-relaxed mt-4">
+                                Would you like me to show you an example with specific numbers?
+                            </p>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-2">StudyBuddy • 1 minute ago</p>
+                    </div>
+                </div>
+
+                <!-- Typing Indicator (Hidden by default) -->
+                <div class="flex items-start space-x-4 hidden" id="typingIndicator" data-implementation="Show when AI is responding">
+                    <div class="w-10 h-10 bg-study-green rounded-full flex items-center justify-center flex-shrink-0">
+                        <i class="fas fa-robot text-white"></i>
+                    </div>
+                    <div class="flex-1">
+                        <div class="bg-ai-msg border border-green-200 rounded-2xl rounded-tl-md p-4 max-w-3xl">
+                            <div class="flex items-center space-x-2">
+                                <div class="flex space-x-1">
+                                    <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                                    <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.1s;"></div>
+                                    <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.2s;"></div>
+                                </div>
+                                <span class="text-sm text-gray-500">StudyBuddy is thinking...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Message Input -->
+            <div class="bg-white border-t border-gray-200 p-4">
+                <div class="max-w-4xl mx-auto">
+                    <!-- @COMPONENT: MessageInput [text input and send button] -->
+                    <div class="flex items-end space-x-4">
+                        <div class="flex-1">
+                            <textarea 
+                                class="w-full resize-none border border-gray-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-study-blue focus:border-transparent placeholder-gray-500 min-h-[52px] max-h-32" 
+                                placeholder="Ask me anything about your homework..."
+                                rows="1"
+                                data-bind="messageInput"
+                                data-event="keypress:handleKeyPress"
+                                data-implementation="Auto-resize and handle enter key"
+                            ></textarea>
+                        </div>
+                        
+                        <button class="bg-study-blue hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white p-3 rounded-xl transition-colors duration-200 flex items-center justify-center min-w-[52px] h-[52px]" data-event="click:sendMessage" data-implementation="Disable when message is empty or sending">
+                            <i class="fas fa-paper-plane text-lg"></i>
+                        </button>
+                    </div>
+                    <!-- @END_COMPONENT: MessageInput -->
+                    
+                    <!-- Input Footer -->
+                    <div class="flex items-center justify-between mt-3 text-xs text-gray-500">
+                        <div class="flex items-center space-x-4">
+                            <div class="flex items-center space-x-1">
+                                <i class="fas fa-shield-alt text-green-600"></i>
+                                <span>Safe & Monitored</span>
+                            </div>
+                            <div class="flex items-center space-x-1">
+                                <i class="fas fa-graduation-cap text-study-blue"></i>
+                                <span>Educational Use Only</span>
+                            </div>
+                        </div>
+                        <span>Press Enter to send, Shift+Enter for new line</span>
+                    </div>
+                </div>
+            </div>
+        </main>
+        <!-- @END_COMPONENT: MainChatArea -->
+    </div>
+    <!-- @END_COMPONENT: AppLayout -->
+
+    <!-- Mobile Sidebar Overlay -->
+    <div class="fixed inset-0 bg-black bg-opacity-50 z-50 lg:hidden hidden" id="sidebarOverlay" data-event="click:closeSidebar">
+        <div class="w-80 h-full bg-white" onclick="event.stopPropagation();">
+            <!-- Mobile sidebar content would be duplicated here -->
+        </div>
+    </div>
+
+    <script>
+        // TODO: Implement OpenAI API integration, chat history persistence, and real-time messaging
+        
+        (function() {
+            // Auto-resize textarea
+            const textarea = document.querySelector('textarea');
+            if (textarea) {
+                textarea.addEventListener('input', function() {
+                    this.style.height = 'auto';
+                    this.style.height = Math.min(this.scrollHeight, 128) + 'px';
+                });
+
+                // Handle Enter key
+                textarea.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        // TODO: Send message
+                        console.log('Send message:', this.value);
+                    }
+                });
+            }
+
+            // Mobile sidebar toggle
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            
+            window.toggleSidebar = function() {
+                sidebar.classList.toggle('-translate-x-full');
+                overlay.classList.toggle('hidden');
+            };
+
+            window.closeSidebar = function() {
+                sidebar.classList.add('-translate-x-full');
+                overlay.classList.add('hidden');
+            };
+
+            // Scroll to bottom of chat
+            const chatMessages = document.getElementById('chatMessages');
+            if (chatMessages) {
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+
+            // Demo typing effect (remove in production)
+            function showTypingIndicator() {
+                document.getElementById('typingIndicator').classList.remove('hidden');
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+
+            function hideTypingIndicator() {
+                document.getElementById('typingIndicator').classList.add('hidden');
+            }
+
+            // TODO: Replace with real API integration
+            window.sendMessage = function() {
+                const textarea = document.querySelector('textarea');
+                const message = textarea.value.trim();
+                if (!message) return;
+
+                // Clear input
+                textarea.value = '';
+                textarea.style.height = 'auto';
+
+                // TODO: Add user message to chat
+                // TODO: Call OpenAI API
+                // TODO: Add AI response to chat
+                // TODO: Save to chat history
+                
+                console.log('Sending message:', message);
+            };
+        })();
+    </script>
+</body>
+</html>
