@@ -1,13 +1,23 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { createORMSession } from "./orm-models";
 import { generateChatResponse, generateChatResponseStream, filterUserInput } from "./services/openai";
+import OpenAI from "openai";
 import { insertChatSchema, insertMessageSchema, insertUserSchema } from "@shared/schema";
 import { z } from "zod";
 import { 
   ObjectStorageService,
   ObjectNotFoundError,
 } from "./objectStorage";
+
+// Initialize OpenAI
+const openai = process.env.OPENAI_API_KEY 
+  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  : null;
+
+// Initialize ORM session
+const orm = createORMSession(storage);
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Health check
@@ -20,15 +30,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userData = insertUserSchema.parse(req.body);
       
-      // Check if user already exists
-      const existingUser = await storage.getUserByEmail(userData.email);
+      // Check if user already exists (using ORM)
+      const existingUser = await orm.User.findByEmail(userData.email);
       if (existingUser) {
         return res.status(400).json({ 
           message: "A user with this email already exists. Please use a different email." 
         });
       }
 
-      const user = await storage.createUser(userData);
+      const user = await orm.User.create({
+        ...userData,
+        createdAt: new Date()
+      });
       res.json(user);
     } catch (error: any) {
       console.error("Registration error:", error);
@@ -38,10 +51,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get all users
+  // Get all users (using ORM)
   app.get("/api/users", async (req, res) => {
     try {
-      const users = await storage.getAllUsers();
+      const users = await orm.User.findAll();
       res.json(users);
     } catch (error) {
       console.error("Error fetching users:", error);
@@ -49,10 +62,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get user info
+  // Get user info (using ORM)
   app.get("/api/users/:id", async (req, res) => {
     try {
-      const user = await storage.getUser(req.params.id);
+      const user = await orm.User.findById(req.params.id);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
@@ -63,14 +76,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get all chats for a user
+  // Get all chats for a user (using ORM)
   app.get("/api/chats", async (req, res) => {
     try {
       const userId = req.query.userId as string;
       if (!userId) {
         return res.status(400).json({ message: "userId is required" });
       }
-      const chats = await storage.getChatsByUserId(userId);
+      const chats = await orm.Chat.findByUserId(userId);
       res.json(chats);
     } catch (error) {
       console.error("Error fetching chats:", error);
@@ -78,11 +91,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Create a new chat
+  // Create a new chat (using ORM)
   app.post("/api/chats", async (req, res) => {
     try {
       const data = insertChatSchema.parse(req.body);
-      const chat = await storage.createChat(data);
+      const chat = await orm.Chat.create(data);
       res.json(chat);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -287,6 +300,385 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: "I'm having trouble thinking right now. Please try asking your question again!" 
         });
       }
+    }
+  });
+
+  // Quiz generation endpoint
+  app.post("/api/quiz/generate", async (req, res) => {
+    try {
+      const quizRequestSchema = z.object({
+        topic: z.string(),
+        grade: z.string(),
+        age: z.number(),
+        name: z.string()
+      });
+
+      const { topic, grade, age, name } = quizRequestSchema.parse(req.body);
+      
+      if (!openai) {
+        return res.status(503).json({ message: "AI service not available" });
+      }
+
+      const gradeLevel = grade === "K" ? "Kindergarten" : `Grade ${grade}`;
+      
+      const systemPrompt = `You are StudyBuddy AI, a friendly educational assistant for children aged 12 and under. 
+
+Generate ONE engaging quiz question for ${name} (age ${age}, ${gradeLevel}) on the topic of ${topic}.
+
+REQUIREMENTS:
+- Make it appropriate for a ${gradeLevel} student
+- Include clear, simple instructions
+- Make it educational and fun
+- Use age-appropriate language
+- If it's multiple choice, provide 3-4 clear options
+- If it's open-ended, give helpful hints
+
+Format your response as a complete question that I can ask directly to the student. Be encouraging and use their name when appropriate.`;
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: `Generate a ${topic} quiz question for me!` }
+        ],
+        max_tokens: 300,
+        temperature: 0.7,
+      });
+
+      const question = completion.choices[0]?.message?.content || 
+        `Here's a ${topic} question for you, ${name}! What would you like to learn about ${topic} today?`;
+
+      res.json({ question });
+    } catch (error) {
+      console.error("Quiz generation error:", error);
+      res.status(500).json({ message: "Failed to generate quiz question" });
+    }
+  });
+
+  // ===== SOL ASSESSMENT ROUTES =====
+  
+  // Get SOL Standards with optional filtering (using ORM)
+  app.get("/api/sol/standards", async (req, res) => {
+    try {
+      const { subject, grade } = req.query;
+      let standards;
+      
+      if (subject && grade) {
+        standards = await orm.SolStandard.findBySubjectAndGrade(subject as string, grade as string);
+      } else if (subject) {
+        standards = await orm.SolStandard.findBySubject(subject as string);
+      } else if (grade) {
+        standards = await orm.SolStandard.findByGrade(grade as string);
+      } else {
+        standards = await orm.SolStandard.findAll();
+      }
+      
+      res.json(standards);
+    } catch (error) {
+      console.error("Error fetching SOL standards:", error);
+      res.status(500).json({ message: "Failed to fetch SOL standards" });
+    }
+  });
+
+  // Get specific SOL standard (using ORM)
+  app.get("/api/sol/standards/:id", async (req, res) => {
+    try {
+      const standard = await orm.SolStandard.findById(req.params.id);
+      if (!standard) {
+        return res.status(404).json({ message: "Standard not found" });
+      }
+      res.json(standard);
+    } catch (error) {
+      console.error("Error fetching SOL standard:", error);
+      res.status(500).json({ message: "Failed to fetch SOL standard" });
+    }
+  });
+
+  // Generate assessment item with AI
+  app.post("/api/sol/generate-item", async (req, res) => {
+    try {
+      if (!openai) {
+        return res.status(500).json({ message: "OpenAI API key not configured" });
+      }
+
+      const { standardId, itemType, difficulty, userId } = req.body;
+      
+      // Validate input
+      if (!standardId || !itemType || !userId) {
+        return res.status(400).json({ message: "Missing required fields: standardId, itemType, userId" });
+      }
+
+      // Get the SOL standard (using ORM)
+      const standard = await orm.SolStandard.findById(standardId);
+      if (!standard) {
+        return res.status(404).json({ message: "Standard not found" });
+      }
+
+      // Get user for grade-appropriate content (using ORM)
+      const user = await orm.User.findById(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Generate AI prompt based on item type and standard
+      let systemPrompt = `You are an expert educational assessment creator specializing in Virginia Standards of Learning (SOL) aligned questions.
+
+Create a ${difficulty || 'medium'} difficulty ${itemType} question for Grade ${user.grade} students aligned to:
+Standard: ${standard.id}
+Subject: ${standard.subject}  
+Description: ${standard.description}
+
+Requirements:
+- Age-appropriate language for Grade ${user.grade} students (ages ${user.age || (parseInt(user.grade) + 5)})
+- Academically rigorous and pedagogically sound
+- Clear, unambiguous wording
+- Aligned to the specific SOL standard
+
+Response format must be valid JSON matching this structure:`;
+
+      if (itemType === 'MCQ') {
+        systemPrompt += `
+{
+  "question": "Clear question text",
+  "options": ["A) Option 1", "B) Option 2", "C) Option 3", "D) Option 4"],
+  "correct_answer": "A",
+  "explanation": "Why this is correct and others are wrong"
+}`;
+      } else if (itemType === 'FIB') {
+        systemPrompt += `
+{
+  "question": "Question with __blank__ to fill in",
+  "correct_answers": ["acceptable answer 1", "acceptable answer 2"],
+  "explanation": "What makes a good answer"
+}`;
+      } else if (itemType === 'CR') {
+        systemPrompt += `
+{
+  "question": "Open-ended question requiring detailed response",
+  "rubric": {
+    "excellent": "4 points criteria",
+    "good": "3 points criteria", 
+    "satisfactory": "2 points criteria",
+    "needs_improvement": "1 point criteria"
+  },
+  "sample_answer": "Example of excellent response"
+}`;
+      }
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: `Generate a ${itemType} question for: ${standard.description}` }
+        ],
+        temperature: 0.7,
+        max_tokens: 1000
+      });
+
+      const generatedContent = completion.choices[0]?.message?.content;
+      if (!generatedContent) {
+        return res.status(500).json({ message: "Failed to generate question content" });
+      }
+
+      // Parse the AI response - handle markdown code blocks
+      let questionData;
+      try {
+        let cleanContent = generatedContent;
+        // Remove markdown code blocks and extra text
+        const jsonMatch = cleanContent.match(/```json\s*([\s\S]*?)\s*```/);
+        if (jsonMatch) {
+          cleanContent = jsonMatch[1];
+        } else {
+          // Try to extract JSON from the text
+          const jsonStart = cleanContent.indexOf('{');
+          const jsonEnd = cleanContent.lastIndexOf('}');
+          if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+            cleanContent = cleanContent.slice(jsonStart, jsonEnd + 1);
+          }
+        }
+        
+        questionData = JSON.parse(cleanContent.trim());
+      } catch (parseError) {
+        console.error("Failed to parse AI response:", generatedContent);
+        return res.status(500).json({ message: "Failed to parse generated question" });
+      }
+
+      // Create assessment item record (using ORM)
+      const assessmentItem = await orm.AssessmentItem.create({
+        solId: standardId,
+        itemType: itemType,
+        difficulty: difficulty || 'medium',
+        dok: 2, // Default DOK level
+        stem: questionData.question,
+        payload: {
+          ...questionData,
+          generatedBy: 'openai-gpt4o',
+          userGrade: user.grade,
+          userAge: user.age,
+          timestamp: new Date().toISOString()
+        }
+      });
+
+      res.json(assessmentItem);
+    } catch (error) {
+      console.error("Error generating assessment item:", error);
+      res.status(500).json({ 
+        message: "Failed to generate assessment item",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Submit assessment attempt
+  app.post("/api/sol/submit-attempt", async (req, res) => {
+    try {
+      if (!openai) {
+        return res.status(500).json({ message: "OpenAI API key not configured" });
+      }
+
+      const { itemId, userId, response } = req.body;
+      
+      // Validate input
+      if (!itemId || !userId || response === undefined) {
+        return res.status(400).json({ message: "Missing required fields: itemId, userId, response" });
+      }
+
+      // Get the assessment item and user (using ORM)
+      const [item, user] = await Promise.all([
+        orm.AssessmentItem.findById(itemId),
+        orm.User.findById(userId)
+      ]);
+
+      if (!item || !user) {
+        return res.status(404).json({ message: "Item or user not found" });
+      }
+
+      let isCorrect = false;
+      let score = 0;
+      let maxScore = 0;
+      let feedback = "";
+
+      // Score the response based on item type
+      const payload = item.payload as any;
+      
+      if (item.itemType === 'MCQ') {
+        maxScore = 1;
+        isCorrect = response === payload.correct_answer;
+        score = isCorrect ? 1 : 0;
+        feedback = payload.explanation || "";
+      } else if (item.itemType === 'FIB') {
+        maxScore = 1;
+        const acceptable = payload.correct_answers || [payload.correct_answer];
+        isCorrect = acceptable.some((answer: string) => 
+          answer && response.toLowerCase().trim().includes(answer.toLowerCase().trim())
+        );
+        score = isCorrect ? 1 : 0;
+        feedback = payload.explanation || "";
+      } else if (item.itemType === 'CR') {
+        // Use AI to score constructed response
+        maxScore = 4;
+        const scoringPrompt = `Score this student response using the provided rubric.
+
+Question: ${item.stem}
+
+Rubric:
+${JSON.stringify(payload.rubric, null, 2)}
+
+Student Response: ${response}
+
+Provide a score from 1-4 and brief feedback. Respond with JSON:
+{
+  "score": <number 1-4>,
+  "feedback": "<encouraging feedback with specific suggestions>",
+  "isCorrect": <true if score >= 3, false otherwise>
+}`;
+
+        const scoringCompletion = await openai.chat.completions.create({
+          model: "gpt-4o",
+          messages: [
+            { role: "system", content: "You are a fair and encouraging teacher scoring student responses." },
+            { role: "user", content: scoringPrompt }
+          ],
+          temperature: 0.3,
+          max_tokens: 300
+        });
+
+        try {
+          let scoringContent = scoringCompletion.choices[0]?.message?.content || "{}";
+          // Remove markdown code blocks and extra text
+          const jsonMatch = scoringContent.match(/```json\s*([\s\S]*?)\s*```/);
+          if (jsonMatch) {
+            scoringContent = jsonMatch[1];
+          } else {
+            // Try to extract JSON from the text
+            const jsonStart = scoringContent.indexOf('{');
+            const jsonEnd = scoringContent.lastIndexOf('}');
+            if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+              scoringContent = scoringContent.slice(jsonStart, jsonEnd + 1);
+            }
+          }
+          
+          const scoringResult = JSON.parse(scoringContent.trim());
+          score = scoringResult.score || 1;
+          isCorrect = scoringResult.isCorrect || score >= 3;
+          feedback = scoringResult.feedback || "Good effort! Keep working on this topic.";
+        } catch (error) {
+          console.error("Error parsing scoring result:", error);
+          score = 2;
+          isCorrect = false;
+          feedback = "Your response has been received. Keep practicing!";
+        }
+      }
+
+      // Create assessment attempt record (using ORM)
+      const attempt = await orm.AssessmentAttempt.create({
+        itemId: itemId,
+        userId: userId,
+        solId: item.solId,
+        userResponse: response,
+        isCorrect: isCorrect,
+        score: score,
+        maxScore: maxScore,
+        durationSeconds: req.body.timeSpent || 0,
+        feedback: feedback
+      });
+
+      res.json({
+        id: attempt.id,
+        is_correct: isCorrect,
+        score: score,
+        max_score: maxScore,
+        feedback: feedback,
+        explanation: (item.payload as any).explanation
+      });
+    } catch (error) {
+      console.error("Error submitting assessment attempt:", error);
+      res.status(500).json({ 
+        message: "Failed to submit attempt",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Get user mastery data (using ORM)
+  app.get("/api/sol/mastery/:userId", async (req, res) => {
+    try {
+      const mastery = await orm.AssessmentAttempt.getUserMastery(req.params.userId);
+      res.json(mastery);
+    } catch (error) {
+      console.error("Error fetching mastery data:", error);
+      res.status(500).json({ message: "Failed to fetch mastery data" });
+    }
+  });
+
+  // Get user's assessment history
+  app.get("/api/sol/attempts/:userId", async (req, res) => {
+    try {
+      const attempts = await storage.getAssessmentAttemptsByUser(req.params.userId);
+      res.json(attempts);
+    } catch (error) {
+      console.error("Error fetching assessment attempts:", error);
+      res.status(500).json({ message: "Failed to fetch attempts" });
     }
   });
 

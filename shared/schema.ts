@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, integer, json, real, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -54,3 +54,57 @@ export type InsertChat = z.infer<typeof insertChatSchema>;
 export type Chat = typeof chats.$inferSelect;
 export type InsertMessage = z.infer<typeof insertMessageSchema>;
 export type Message = typeof messages.$inferSelect;
+
+// SOL Assessment Tables
+export const solStandards = pgTable("sol_standards", {
+  id: text("id").primaryKey(),
+  subject: text("subject").notNull(),
+  grade: text("grade").notNull(),
+  strand: text("strand").notNull(),
+  description: text("description").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const assessmentItems = pgTable("assessment_items", {
+  id: text("id").primaryKey().default(sql`gen_random_uuid()`),
+  solId: text("sol_id").notNull().references(() => solStandards.id),
+  itemType: text("item_type").notNull(), // MCQ, FIB, CR
+  difficulty: text("difficulty").notNull(), // easy, medium, hard
+  dok: integer("dok").notNull(), // Depth of Knowledge 1-4
+  stem: text("stem").notNull(),
+  payload: json("payload").notNull(), // Full item JSON (choices for MCQ, answer_key for FIB, rubric for CR)
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const assessmentAttempts = pgTable("assessment_attempts", {
+  id: text("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: text("user_id").notNull().references(() => users.id),
+  itemId: text("item_id").notNull().references(() => assessmentItems.id),
+  solId: text("sol_id").notNull(),
+  userResponse: json("user_response").notNull(),
+  isCorrect: boolean("is_correct").notNull(),
+  score: real("score").notNull(),
+  maxScore: real("max_score").notNull(),
+  feedback: text("feedback"),
+  durationSeconds: real("duration_seconds"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertSolStandardSchema = createInsertSchema(solStandards).omit({
+  createdAt: true,
+});
+export const insertAssessmentItemSchema = createInsertSchema(assessmentItems).omit({
+  id: true,
+  createdAt: true,
+});
+export const insertAssessmentAttemptSchema = createInsertSchema(assessmentAttempts).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type SolStandard = typeof solStandards.$inferSelect;
+export type AssessmentItem = typeof assessmentItems.$inferSelect;
+export type AssessmentAttempt = typeof assessmentAttempts.$inferSelect;
+export type InsertSolStandard = z.infer<typeof insertSolStandardSchema>;
+export type InsertAssessmentItem = z.infer<typeof insertAssessmentItemSchema>;
+export type InsertAssessmentAttempt = z.infer<typeof insertAssessmentAttemptSchema>;

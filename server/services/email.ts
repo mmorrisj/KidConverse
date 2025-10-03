@@ -1,17 +1,33 @@
-import sgMail from '@sendgrid/mail';
-import { storage } from '../storage';
 
-if (process.env.SENDGRID_API_KEY) {
-  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-}
+import nodemailer from 'nodemailer';
+import { storage } from '../storage';
 
 interface EmailService {
   sendDailyChatSummary(userId: string): Promise<boolean>;
 }
 
-export class SendGridEmailService implements EmailService {
+export class GmailEmailService implements EmailService {
+  private transporter: nodemailer.Transporter;
+
+  constructor() {
+    if (process.env.GMAIL_USER && process.env.GMAIL_PASSWORD) {
+      this.transporter = nodemailer.createTransporter({
+        service: 'gmail',
+        auth: {
+          user: process.env.GMAIL_USER,
+          pass: process.env.GMAIL_PASSWORD // Use app password, not regular password
+        }
+      });
+    }
+  }
+
   async sendDailyChatSummary(userId: string): Promise<boolean> {
     try {
+      if (!this.transporter) {
+        console.log('Gmail credentials not configured. Email content would be sent via Gmail SMTP');
+        return false;
+      }
+
       const user = await storage.getUser(userId);
       if (!user) {
         console.error('User not found for email summary:', userId);
@@ -88,24 +104,19 @@ export class SendGridEmailService implements EmailService {
         </html>
       `;
 
-      const msg = {
+      const mailOptions = {
+        from: process.env.GMAIL_USER,
         to: user.email,
-        from: 'studybuddy@yourdomain.com', // Update this to your verified sender
         subject: `📚 ${user.name}'s Learning Summary - ${today.toDateString()}`,
         html: emailContent,
       };
 
-      if (!process.env.SENDGRID_API_KEY) {
-        console.log('SendGrid API key not configured. Email content would be:', emailContent);
-        return false;
-      }
-
-      await sgMail.send(msg);
-      console.log(`Daily summary email sent successfully to ${user.email}`);
+      await this.transporter.sendMail(mailOptions);
+      console.log(`Daily summary email sent successfully to ${user.email} via Gmail SMTP`);
       return true;
 
     } catch (error) {
-      console.error('Error sending daily summary email:', error);
+      console.error('Error sending daily summary email via Gmail:', error);
       return false;
     }
   }
@@ -119,6 +130,6 @@ export class MockEmailService implements EmailService {
   }
 }
 
-export const emailService = process.env.SENDGRID_API_KEY 
-  ? new SendGridEmailService() 
+export const emailService = (process.env.GMAIL_USER && process.env.GMAIL_PASSWORD)
+  ? new GmailEmailService() 
   : new MockEmailService();

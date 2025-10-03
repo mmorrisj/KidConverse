@@ -1,54 +1,53 @@
-# Multi-stage build optimized for ARM architecture (Raspberry Pi)
-FROM node:18-alpine AS base
-
-# Install dependencies only when needed
-FROM base AS deps
-RUN apk add --no-cache libc6-compat python3 make g++
+# ---------- base ----------
+FROM node:20-alpine AS base
 WORKDIR /app
 
-# Install dependencies based on the preferred package manager
+# ---------- deps: install ALL deps for build (incl. dev like vite/esbuild) ----------
+FROM base AS deps
+RUN apk add --no-cache libc6-compat python3 make g++
 COPY package.json package-lock.json* ./
 RUN npm ci && npm cache clean --force
 
-# Rebuild the source code only when needed
+# ---------- builder: create production build ----------
 FROM base AS builder
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-
-# Set environment variables for production build
-ENV NODE_ENV production
-ENV NEXT_TELEMETRY_DISABLED 1
-
-# Build the application
 RUN npm run build
+# Optional debug (uncomment if needed):
+# RUN echo '--- tree after build ---' && ls -R
 
-# Production image, copy all the files and run the app
-FROM base AS runner
+# ---------- runner: slim runtime with prod-only deps ----------
+FROM node:20-alpine AS runner
 WORKDIR /app
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV PORT=5000
 
-ENV NODE_ENV production
-ENV NEXT_TELEMETRY_DISABLED 1
+# non-root user
+RUN addgroup --system --gid 1001 studybuddy \
+ && adduser  --system --uid 1001 studybuddy
 
-# Create a non-root user for security
-RUN addgroup --system --gid 1001 studybuddy
-RUN adduser --system --uid 1001 studybuddy
+# install prod deps as root (avoids EACCES)
+COPY package.json package-lock.json* ./
+RUN npm ci --omit=dev --omit=optional && npm cache clean --force
 
-# Copy built application
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./package.json
+# ---- bring in build output ----
+# Client (Vite) output lives in client/dist when Vite root is "client"
+COPY --from=builder /app/client/dist ./dist
+# Server bundle from esbuild lives in dist/server
+COPY --from=builder /app/dist/server ./dist/server
 
-# Change ownership to non-root user
+# drop privileges
 RUN chown -R studybuddy:studybuddy /app
 USER studybuddy
 
-# Expose port
 EXPOSE 5000
-
-# Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:5000/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
+  CMD node -e "require('http').get('http://localhost:5000/health', r => process.exit(r.statusCode===200?0:1))"
 
-# Start the application
-CMD ["node", "dist/index.js"]
+# Run the server bundle produced by esbuild
+CMD ["node", "dist/server/index.js"]
+

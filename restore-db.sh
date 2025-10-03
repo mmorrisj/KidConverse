@@ -33,9 +33,9 @@ docker-compose stop studybuddy
 
 # Restore the database
 if [[ "$BACKUP_FILE" == *.gz ]]; then
-    gunzip -c "$BACKUP_FILE" | docker-compose exec -T postgres psql -U studybuddy -d studybuddy
+    gunzip -c "$BACKUP_FILE" | docker-compose exec -T postgres psql -U user -d studybuddy
 else
-    docker-compose exec -T postgres psql -U studybuddy -d studybuddy < "$BACKUP_FILE"
+    docker-compose exec -T postgres psql -U user -d studybuddy < "$BACKUP_FILE"
 fi
 
 # Restart the application

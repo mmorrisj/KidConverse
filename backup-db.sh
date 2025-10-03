@@ -14,7 +14,7 @@ echo "Creating backup at $BACKUP_FILE..."
 mkdir -p "$BACKUP_DIR"
 
 # Perform backup
-docker-compose exec -T postgres pg_dump -U studybuddy studybuddy > "$BACKUP_FILE"
+docker-compose exec -T postgres pg_dump -U user studybuddy > "$BACKUP_FILE"
 
 # Compress the backup
 gzip "$BACKUP_FILE"

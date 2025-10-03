@@ -6,12 +6,9 @@ set -e
 
 echo "Setting up StudyBuddy AI on Raspberry Pi 5..."
 
-# Create data directory for PostgreSQL with proper permissions
-DATA_DIR="/home/pi/studybuddy/postgres-data"
-echo "Creating PostgreSQL data directory at $DATA_DIR..."
-sudo mkdir -p "$DATA_DIR"
-sudo chown -R 999:999 "$DATA_DIR"  # PostgreSQL runs as UID 999 in Docker
-sudo chmod 700 "$DATA_DIR"
+# Create the named Docker volume for PostgreSQL data persistence
+echo "Creating Docker volume for PostgreSQL data..."
+docker volume create kidconverse_pgdata
 
 # Create backup directory
 BACKUP_DIR="/home/pi/studybuddy/backups"
@@ -22,9 +19,12 @@ mkdir -p "$BACKUP_DIR"
 if [ ! -f .env ]; then
     echo "Creating .env file..."
     cat > .env <<EOF
-# Database Configuration
-DATABASE_URL=postgresql://studybuddy:studybuddy123@postgres:5432/studybuddy
-POSTGRES_PASSWORD=studybuddy123
+# Database Configuration (matches docker-compose.yml)
+PGHOST=postgres
+PGPORT=5432
+PGUSER=user
+PGPASSWORD=password
+PGDATABASE=studybuddy
 
 # OpenAI API Key (replace with your actual key)
 OPENAI_API_KEY=sk-your-openai-api-key-here

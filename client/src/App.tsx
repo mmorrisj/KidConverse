@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import ChatPage from "@/pages/chat";
 import Register from "@/pages/register";
+import SOLAssessmentPage from "@/pages/sol-assessment";
 import NotFound from "@/pages/not-found";
 import { UserSelector } from "@/components/UserSelector";
 import type { User } from "@shared/schema";
@@ -47,12 +48,17 @@ function Router() {
     setCurrentUser(user);
     localStorage.setItem('studybuddy-user-id', user.id);
     setShowRegister(false);
+    // Invalidate the users query to refresh the list
+    queryClient.invalidateQueries({ queryKey: ['/api/users'] });
   };
 
   const handleLogout = () => {
     setCurrentUser(null);
     localStorage.removeItem('studybuddy-user-id');
     setShowRegister(false);
+    // Invalidate queries to refresh data
+    queryClient.invalidateQueries({ queryKey: ['/api/users'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/chats'] });
   };
 
   if (isLoading) {
@@ -71,6 +77,21 @@ function Router() {
       <Route path="/">
         {currentUser ? (
           <ChatPage currentUser={currentUser} onLogout={handleLogout} />
+        ) : showRegister ? (
+          <Register 
+            onSuccess={handleUserRegistered} 
+            onBack={() => setShowRegister(false)}
+          />
+        ) : (
+          <UserSelector 
+            onUserSelect={handleUserSelect}
+            onNewUser={() => setShowRegister(true)}
+          />
+        )}
+      </Route>
+      <Route path="/sol-assessment">
+        {currentUser ? (
+          <SOLAssessmentPage currentUser={currentUser} />
         ) : showRegister ? (
           <Register 
             onSuccess={handleUserRegistered} 

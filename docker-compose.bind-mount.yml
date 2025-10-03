@@ -1,0 +1,43 @@
+version: "3.8"
+
+# Alternative configuration using bind mount for direct filesystem access
+# Use this if you prefer bind mounts over named volumes
+# To use: docker-compose -f docker-compose.bind-mount.yml up -d
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: "user"
+      POSTGRES_PASSWORD: "password"
+      POSTGRES_DB: "studybuddy"
+    ports:
+      - "5439:5432"  # host:container (optional, for host tools)
+    volumes:
+      - /home/pi/studybuddy/postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d studybuddy"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  studybuddy:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    environment:
+      NODE_ENV: "production"
+      PORT: "5000"
+      PGHOST: "postgres"   # talk to DB by service name
+      PGPORT: "5432"       # container port, not host-mapped 5439
+      PGUSER: "user"
+      PGPASSWORD: "password"
+      PGDATABASE: "studybuddy"
+      OPENAI_API_KEY: "${OPENAI_API_KEY}"
+      ENABLE_WEBSOCKET: "false"
+    depends_on:
+      - postgres
+    restart: unless-stopped

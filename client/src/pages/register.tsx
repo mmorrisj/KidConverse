@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { insertUserSchema, type InsertUser } from '@shared/schema';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,6 +18,7 @@ interface RegisterProps {
 export default function Register({ onSuccess, onBack }: RegisterProps) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const queryClient = useQueryClient();
 
   const form = useForm<InsertUser>({
     resolver: zodResolver(insertUserSchema),
@@ -39,6 +40,8 @@ export default function Register({ onSuccess, onBack }: RegisterProps) {
         title: "Welcome to StudyBuddy!",
         description: `Hi ${user.name}! Let's start learning together.`,
       });
+      // Invalidate users query to refresh the user list
+      queryClient.invalidateQueries({ queryKey: ['/api/users'] });
       onSuccess(user);
     },
     onError: (error: any) => {

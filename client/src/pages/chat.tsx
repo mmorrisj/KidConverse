@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Navigation } from "@/components/Navigation";
 import ChatSidebar from "../components/chat/ChatSidebar";
 import ChatMessages from "../components/chat/ChatMessages";
 import MessageInput from "../components/chat/MessageInput";
@@ -45,7 +46,9 @@ export default function ChatPage({ currentUser, onLogout }: ChatPageProps) {
   };
 
   return (
-    <div className="flex h-screen bg-chat-bg">
+    <div className="flex flex-col h-screen h-dvh bg-chat-bg overflow-hidden">
+      <Navigation currentUser={currentUser} onLogout={onLogout || (() => {})} />
+      <div className="flex flex-1 overflow-hidden">
       {/* Mobile Sidebar Overlay */}
       {isSidebarOpen && (
         <div 
@@ -81,7 +84,7 @@ export default function ChatPage({ currentUser, onLogout }: ChatPageProps) {
       </div>
 
       {/* Main Chat Area */}
-      <main className="flex-1 flex flex-col">
+      <main className="flex-1 flex flex-col min-h-0 relative">
         {/* Chat Header */}
         <header className="bg-white border-b border-gray-200 p-4">
           <div className="flex items-center justify-between">
@@ -126,23 +129,26 @@ export default function ChatPage({ currentUser, onLogout }: ChatPageProps) {
           </div>
         </header>
 
-        <ChatMessages 
-          chatId={selectedChatId} 
-          onChatCreated={handleChatCreated}
-          streamingContent={streamingContent}
-          isStreaming={isStreaming}
-        />
-        
-        <MessageInput 
-          chatId={selectedChatId}
-          currentUser={currentUser}
-          onChatCreated={handleChatCreated}
-          onStreamingUpdate={(content, streaming) => {
-            setStreamingContent(content);
-            setIsStreaming(streaming);
-          }}
-        />
+        <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+          <ChatMessages 
+            chatId={selectedChatId} 
+            onChatCreated={handleChatCreated}
+            streamingContent={streamingContent}
+            isStreaming={isStreaming}
+          />
+          
+          <MessageInput 
+            chatId={selectedChatId}
+            currentUser={currentUser}
+            onChatCreated={handleChatCreated}
+            onStreamingUpdate={(content, streaming) => {
+              setStreamingContent(content);
+              setIsStreaming(streaming);
+            }}
+          />
+        </div>
       </main>
+      </div>
     </div>
   );
 }

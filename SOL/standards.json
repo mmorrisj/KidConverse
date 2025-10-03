@@ -1,0 +1,94 @@
+{
+  "mathematics": {
+    "K": {
+      "K.1": {
+        "title": "Count forward and backward",
+        "description": "The student will count forward orally by ones to 100, count backward orally by ones from 20, and count by tens to 100, beginning with any multiple of ten.",
+        "strands": ["Number and Number Sense"]
+      },
+      "K.2": {
+        "title": "Count objects up to 20",
+        "description": "The student will count forward by ones to at least 31 and count a set of objects up to 20.",
+        "strands": ["Number and Number Sense"]
+      }
+    },
+    "1": {
+      "1.1": {
+        "title": "Count objects and write numerals",
+        "description": "The student will count forward orally by ones to 110, count by fives and tens to 100, and write the numerals 0 through 110.",
+        "strands": ["Number and Number Sense"]
+      },
+      "1.2": {
+        "title": "Add and subtract whole numbers",
+        "description": "The student will recall basic addition facts with sums to 18 or less and the corresponding subtraction facts.",
+        "strands": ["Computation and Estimation"]
+      }
+    },
+    "2": {
+      "2.1": {
+        "title": "Read and write numerals",
+        "description": "The student will read, write, and identify the place value of each digit in a three-digit numeral, using concrete materials.",
+        "strands": ["Number and Number Sense"]
+      },
+      "2.2": {
+        "title": "Compare and order whole numbers",
+        "description": "The student will compare two whole numbers between 0 and 999, using symbols (>, <, =) and words (greater than, less than, equal to).",
+        "strands": ["Number and Number Sense"]
+      }
+    },
+    "3": {
+      "3.1": {
+        "title": "Read and represent whole numbers through 9,999",
+        "description": "The student will read and write six-digit whole numbers and identify the place value and value of each digit.",
+        "strands": ["Number and Number Sense"]
+      },
+      "3.2": {
+        "title": "Compare and order whole numbers through 9,999",
+        "description": "The student will compare and order whole numbers through 9,999, using the symbols <, >, and =.",
+        "strands": ["Number and Number Sense"]
+      },
+      "3.3": {
+        "title": "Identify and represent equivalent forms of fractions",
+        "description": "The student will identify and represent fractions and mixed numbers with denominators through 12.",
+        "strands": ["Number and Number Sense"]
+      },
+      "3.4": {
+        "title": "Add and subtract whole numbers",
+        "description": "The student will estimate sums and differences of whole numbers and add and subtract whole numbers, with and without regrouping.",
+        "strands": ["Computation and Estimation"]
+      }
+    }
+  },
+  "science": {
+    "K": {
+      "K.1": {
+        "title": "Scientific investigation and reasoning skills",
+        "description": "The student will demonstrate an understanding of scientific reasoning, logic, and the nature of science by planning and conducting investigations.",
+        "strands": ["Scientific Investigation, Reasoning, and Logic"]
+      }
+    },
+    "1": {
+      "1.1": {
+        "title": "Scientific investigation and reasoning skills",
+        "description": "The student will demonstrate an understanding of scientific reasoning, logic, and the nature of science by planning and conducting investigations.",
+        "strands": ["Scientific Investigation, Reasoning, and Logic"]
+      }
+    }
+  },
+  "english": {
+    "K": {
+      "K.1": {
+        "title": "Oral language",
+        "description": "The student will demonstrate growth in oral early literacy skills.",
+        "strands": ["Oral Language"]
+      }
+    },
+    "1": {
+      "1.1": {
+        "title": "Oral language",
+        "description": "The student will continue to demonstrate growth in oral early literacy skills.",
+        "strands": ["Oral Language"]
+      }
+    }
+  }
+}
