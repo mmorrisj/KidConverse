@@ -370,7 +370,7 @@ export default function MessageInput({ chatId, currentUser, onChatCreated, onStr
   const isSubmitting = createChatMutation.isPending || isLoading; // Use isLoading from the sendMessage function
 
   return (
-    <div className="bg-white border-t border-gray-200 p-4 sticky bottom-0 z-10 shadow-lg">
+    <div className="bg-white border-t border-gray-200 p-3 sm:p-4 sticky bottom-0 z-10 shadow-lg">
       <div className="max-w-4xl mx-auto">
         {/* Typing Indicator */}
         {isTyping && ( // This isTyping might need to be managed based on the sendMessage's isLoading state
@@ -386,23 +386,24 @@ export default function MessageInput({ chatId, currentUser, onChatCreated, onStr
 
         {/* Image Preview */}
         {uploadedImageUrl && (
-          <div className="mb-4 p-3 bg-gray-50 rounded-lg border">
+          <div className="mb-3 sm:mb-4 p-2 sm:p-3 bg-gray-50 rounded-lg border">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
-                <i className="fas fa-image text-study-blue"></i>
-                <span className="text-sm text-gray-700">Homework photo attached</span>
+                <i className="fas fa-image text-study-blue text-sm"></i>
+                <span className="text-xs sm:text-sm text-gray-700">Homework photo attached</span>
               </div>
               <button
                 onClick={removeImage}
-                className="text-gray-500 hover:text-red-500 transition-colors"
+                className="text-gray-500 hover:text-red-500 transition-colors p-2 touch-manipulation"
+                aria-label="Remove image"
               >
-                <i className="fas fa-times"></i>
+                <i className="fas fa-times text-sm"></i>
               </button>
             </div>
           </div>
         )}
 
-        <div className="flex items-end space-x-4">
+        <div className="flex items-end space-x-2 sm:space-x-4">
           <div className="flex-1">
             <Textarea
               ref={textareaRef}
@@ -410,33 +411,34 @@ export default function MessageInput({ chatId, currentUser, onChatCreated, onStr
               onChange={handleMessageChange}
               onKeyPress={handleKeyPress}
               placeholder={uploadedImageUrl ? "Ask me to check your work..." : isListening ? "Listening... Speak your question" : "Ask me anything about your homework..."}
-              className="resize-none border border-gray-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-study-blue focus:border-transparent placeholder-gray-500 min-h-[52px] max-h-[120px] overflow-y-auto transition-all duration-200"
+              className="resize-none border border-gray-300 rounded-xl px-3 sm:px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-study-blue focus:border-transparent placeholder-gray-500 min-h-[48px] sm:min-h-[52px] max-h-[120px] overflow-y-auto transition-all duration-200"
               rows={1}
               disabled={isSubmitting}
-              style={{ height: '52px' }}
+              style={{ height: '48px' }}
               onInput={autoResizeTextarea}
             />
           </div>
 
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-1 sm:space-x-2">
             {/* Voice Input Button */}
             {speechSupported && (
               <Button
                 onClick={toggleSpeechRecognition}
                 disabled={isSubmitting}
-                className={`p-3 rounded-xl transition-colors duration-200 flex items-center justify-center min-w-[52px] h-[52px] ${
-                  isListening 
-                    ? 'bg-red-500 hover:bg-red-600 text-white' 
+                className={`p-2 sm:p-3 rounded-xl transition-colors duration-200 flex items-center justify-center min-w-[44px] sm:min-w-[52px] h-[44px] sm:h-[52px] touch-manipulation ${
+                  isListening
+                    ? 'bg-red-500 hover:bg-red-600 text-white'
                     : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
                 }`}
                 title={isListening ? "Stop listening" : "Start voice input"}
+                aria-label={isListening ? "Stop listening" : "Start voice input"}
               >
-                {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+                {isListening ? <MicOff className="w-4 h-4 sm:w-5 sm:h-5" /> : <Mic className="w-4 h-4 sm:w-5 sm:h-5" />}
               </Button>
             )}
 
-            <QuizSelector 
-              currentUser={currentUser} 
+            <QuizSelector
+              currentUser={currentUser}
               onQuizSelect={handleQuizSelect}
             />
 
@@ -445,44 +447,45 @@ export default function MessageInput({ chatId, currentUser, onChatCreated, onStr
               maxFileSize={10485760}
               onGetUploadParameters={handleImageUpload}
               onComplete={handleUploadComplete}
-              buttonClassName="bg-gray-100 hover:bg-gray-200 text-gray-600 p-3 rounded-xl transition-colors duration-200 flex items-center justify-center min-w-[52px] h-[52px]"
+              buttonClassName="bg-gray-100 hover:bg-gray-200 text-gray-600 p-2 sm:p-3 rounded-xl transition-colors duration-200 flex items-center justify-center min-w-[44px] sm:min-w-[52px] h-[44px] sm:h-[52px] touch-manipulation"
             >
-              <i className="fas fa-camera text-lg"></i>
+              <i className="fas fa-camera text-base sm:text-lg"></i>
             </ObjectUploader>
 
             <Button
               onClick={handleSubmit}
               disabled={!message.trim() && !uploadedImageUrl || isSubmitting}
-              className="bg-study-blue hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white p-3 rounded-xl transition-colors duration-200 flex items-center justify-center min-w-[52px] h-[52px]"
+              className="bg-study-blue hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white p-2 sm:p-3 rounded-xl transition-colors duration-200 flex items-center justify-center min-w-[44px] sm:min-w-[52px] h-[44px] sm:h-[52px] touch-manipulation"
+              aria-label="Send message"
             >
               {isSubmitting ? (
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
               ) : (
-                <Send className="w-5 h-5" />
+                <Send className="w-4 h-4 sm:w-5 sm:h-5" />
               )}
             </Button>
           </div>
         </div>
 
         {/* Input Footer */}
-        <div className="flex items-center justify-between mt-3 text-xs text-gray-500">
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-1">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mt-2 sm:mt-3 text-xs text-gray-500 gap-2">
+          <div className="flex items-center space-x-2 sm:space-x-4 overflow-x-auto">
+            <div className="flex items-center space-x-1 flex-shrink-0">
               <i className="fas fa-shield-alt text-green-600"></i>
-              <span>Safe & Monitored</span>
+              <span className="hidden xs:inline">Safe & Monitored</span>
             </div>
-            <div className="flex items-center space-x-1">
+            <div className="flex items-center space-x-1 flex-shrink-0">
               <i className="fas fa-graduation-cap text-study-blue"></i>
-              <span>Educational Use Only</span>
+              <span className="hidden xs:inline">Educational Use Only</span>
             </div>
             {speechSupported && (
-              <div className="flex items-center space-x-1">
+              <div className="flex items-center space-x-1 flex-shrink-0">
                 <Mic className="w-3 h-3 text-study-blue" />
-                <span>Voice Input Available</span>
+                <span className="hidden sm:inline">Voice Input Available</span>
               </div>
             )}
           </div>
-          <span>Press Enter to send, Shift+Enter for new line</span>
+          <span className="hidden sm:inline text-right flex-shrink-0">Press Enter to send, Shift+Enter for new line</span>
         </div>
       </div>
     </div>

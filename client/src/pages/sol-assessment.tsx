@@ -254,28 +254,28 @@ export default function SOLAssessment({ currentUser, onLogout }: SOLAssessmentPr
     const payload = currentItem.payload as any;
 
     return (
-      <Card className="mb-6">
-        <CardHeader>
-          <div className="flex items-center justify-between">
+      <Card className="mb-4 sm:mb-6">
+        <CardHeader className="p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="flex items-center gap-2">
-              <CardTitle className="text-lg">Assessment Question</CardTitle>
+              <CardTitle className="text-base sm:text-lg">Assessment Question</CardTitle>
               {numberOfQuestions > 1 && (
-                <Badge variant="secondary">
+                <Badge variant="secondary" className="text-xs">
                   {currentQuestionIndex + 1} of {numberOfQuestions}
                 </Badge>
               )}
             </div>
-            <div className="flex gap-2">
-              <Badge variant="outline">{currentItem.itemType}</Badge>
-              <Badge variant="outline">{currentItem.difficulty}</Badge>
-              <Badge variant="outline">DOK {currentItem.dok}</Badge>
+            <div className="flex gap-2 flex-wrap">
+              <Badge variant="outline" className="text-xs">{currentItem.itemType}</Badge>
+              <Badge variant="outline" className="text-xs">{currentItem.difficulty}</Badge>
+              <Badge variant="outline" className="text-xs">DOK {currentItem.dok}</Badge>
             </div>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-4 sm:p-6">
           <div className="mb-4">
-            <p className="text-sm text-gray-600 mb-2">Standard: {currentItem.solId}</p>
-            <p className="text-base leading-relaxed">{currentItem.stem}</p>
+            <p className="text-xs sm:text-sm text-gray-600 mb-2">Standard: {currentItem.solId}</p>
+            <p className="text-sm sm:text-base leading-relaxed">{currentItem.stem}</p>
           </div>
 
           {!showResults && (
@@ -285,9 +285,9 @@ export default function SOLAssessment({ currentUser, onLogout }: SOLAssessmentPr
                   {payload.options?.map((option: string, index: number) => {
                     const optionLetter = String.fromCharCode(65 + index); // A, B, C, D
                     return (
-                      <div key={optionLetter} className="flex items-center space-x-2">
-                        <RadioGroupItem value={optionLetter} id={optionLetter} />
-                        <Label htmlFor={optionLetter} className="flex-1 cursor-pointer">
+                      <div key={optionLetter} className="flex items-center space-x-3 py-2">
+                        <RadioGroupItem value={optionLetter} id={optionLetter} className="min-w-[20px]" />
+                        <Label htmlFor={optionLetter} className="flex-1 cursor-pointer text-sm sm:text-base leading-relaxed">
                           {option}
                         </Label>
                       </div>
@@ -330,7 +330,7 @@ export default function SOLAssessment({ currentUser, onLogout }: SOLAssessmentPr
               <Button
                 onClick={handleSubmitResponse}
                 disabled={!userResponse.trim() || submitResponseMutation.isPending}
-                className="w-full"
+                className="w-full h-12 text-base"
               >
                 {submitResponseMutation.isPending ? "Submitting..." : "Submit Answer"}
               </Button>
@@ -359,11 +359,11 @@ export default function SOLAssessment({ currentUser, onLogout }: SOLAssessmentPr
 
               <div className="flex gap-2">
                 {currentQuestionIndex + 1 < numberOfQuestions ? (
-                  <Button onClick={handleNewQuestion} className="flex-1">
+                  <Button onClick={handleNewQuestion} className="flex-1 h-12 text-base">
                     Next Question ({currentQuestionIndex + 2} of {numberOfQuestions})
                   </Button>
                 ) : (
-                  <Button onClick={handleNewQuestion} variant="outline" className="flex-1">
+                  <Button onClick={handleNewQuestion} variant="outline" className="flex-1 h-12 text-base">
                     {completedAttempts.length > 1 ? "View Summary" : "Try Another Set"}
                   </Button>
                 )}
@@ -376,24 +376,24 @@ export default function SOLAssessment({ currentUser, onLogout }: SOLAssessmentPr
   };
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col h-screen h-dvh">
       <Navigation currentUser={currentUser} onLogout={onLogout || (() => {})} />
       <div className="flex-1 overflow-auto">
-        <div className="container mx-auto px-4 py-8">
+        <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
       <div className="max-w-4xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-study-blue mb-2">SOL Assessment</h1>
-          <p className="text-gray-600">
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-bold text-study-blue mb-2">SOL Assessment</h1>
+          <p className="text-sm sm:text-base text-gray-600">
             Practice with Virginia Standards of Learning aligned questions for {currentUser.name} (Grade {currentUser.grade})
           </p>
         </div>
 
         {!currentItem && (
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle>Generate Assessment Question</CardTitle>
+          <Card className="mb-4 sm:mb-6">
+            <CardHeader className="p-4 sm:p-6">
+              <CardTitle className="text-base sm:text-lg">Generate Assessment Question</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 p-4 sm:p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label>Subject</Label>
@@ -483,7 +483,7 @@ export default function SOLAssessment({ currentUser, onLogout }: SOLAssessmentPr
               <Button
                 onClick={handleGenerateItem}
                 disabled={!selectedStandard || generateItemMutation.isPending}
-                className="w-full"
+                className="w-full h-12 text-base"
               >
                 {generateItemMutation.isPending ? "Generating Question..." : "Generate Question"}
               </Button>
@@ -494,11 +494,11 @@ export default function SOLAssessment({ currentUser, onLogout }: SOLAssessmentPr
         {renderQuestionContent()}
 
         {!currentItem && completedAttempts.length > 1 && (
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle>Assessment Summary</CardTitle>
+          <Card className="mb-4 sm:mb-6">
+            <CardHeader className="p-4 sm:p-6">
+              <CardTitle className="text-base sm:text-lg">Assessment Summary</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4 sm:p-6">
               <div className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                   <div className="text-center p-4 bg-blue-50 rounded-lg">
@@ -521,13 +521,13 @@ export default function SOLAssessment({ currentUser, onLogout }: SOLAssessmentPr
                   </div>
                 </div>
                 
-                <Button 
+                <Button
                   onClick={() => {
                     setQuestionQueue([]);
                     setCurrentQuestionIndex(0);
                     setCompletedAttempts([]);
-                  }} 
-                  className="w-full"
+                  }}
+                  className="w-full h-12 text-base"
                 >
                   Start New Assessment
                 </Button>

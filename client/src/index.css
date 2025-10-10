@@ -252,45 +252,64 @@ html, body {
   .bg-study-blue {
     background-color: var(--study-blue);
   }
-  
+
   .bg-study-green {
     background-color: var(--study-green);
   }
-  
+
   .bg-study-orange {
     background-color: var(--study-orange);
   }
-  
+
   .bg-chat-bg {
     background-color: var(--chat-bg);
   }
-  
+
   .bg-user-msg {
     background-color: var(--user-msg);
   }
-  
+
   .bg-ai-msg {
     background-color: var(--ai-msg);
   }
-  
+
   .text-study-blue {
     color: var(--study-blue);
   }
-  
+
   .text-study-green {
     color: var(--study-green);
   }
-  
+
   .text-study-orange {
     color: var(--study-orange);
   }
-  
+
   .border-study-blue {
     border-color: var(--study-blue);
   }
-  
+
   .border-study-green {
     border-color: var(--study-green);
+  }
+
+  /* Touch-friendly mobile utilities */
+  .touch-manipulation {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Extra small breakpoint for very narrow screens */
+  @media (min-width: 375px) {
+    .xs\:inline {
+      display: inline;
+    }
+    .xs\:block {
+      display: block;
+    }
+    .xs\:flex {
+      display: flex;
+    }
   }
 
   /* Rich message content styles */
