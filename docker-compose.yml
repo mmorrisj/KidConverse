@@ -40,5 +40,4 @@ services:
 
 volumes:
   pgdata:
-    external: true
     name: kidconverse_pgdata   # fixed name so data persists across rebuilds
