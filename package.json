@@ -14,7 +14,11 @@
     "db:push": "drizzle-kit push",
     "sol:process": "tsx scripts/process-sol.ts",
     "sol:process-all": "tsx scripts/process-sol.ts process-all",
-    "sol:validate": "tsx scripts/process-sol.ts validate"
+    "sol:validate": "tsx scripts/process-sol.ts validate",
+    "pipeline:process": "python sol_pipeline_cli.py process",
+    "pipeline:batch": "python sol_pipeline_cli.py batch SOL/Documentation/",
+    "pipeline:list": "python sol_pipeline_cli.py list-staged",
+    "pipeline:test": "python test_sol_pipeline.py"
   },
   "dependencies": {
     "@google-cloud/storage": "^7.16.0",
