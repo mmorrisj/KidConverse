@@ -86,43 +86,45 @@ export default function ChatPage({ currentUser, onLogout }: ChatPageProps) {
       {/* Main Chat Area */}
       <main className="flex-1 flex flex-col min-h-0 relative">
         {/* Chat Header */}
-        <header className="bg-white border-b border-gray-200 p-4">
+        <header className="bg-white border-b border-gray-200 p-3 sm:p-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <button 
-                className="lg:hidden p-2 rounded-lg hover:bg-gray-100"
+            <div className="flex items-center space-x-2 sm:space-x-3 flex-1 min-w-0">
+              <button
+                className="lg:hidden p-2 rounded-lg hover:bg-gray-100 active:bg-gray-200 touch-manipulation flex-shrink-0"
                 onClick={() => setIsSidebarOpen(true)}
+                aria-label="Open menu"
               >
-                <i className="fas fa-bars text-gray-600"></i>
+                <i className="fas fa-bars text-gray-600 text-base"></i>
               </button>
-              <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 bg-study-green rounded-full flex items-center justify-center">
+              <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
+                <div className="w-8 h-8 bg-study-green rounded-full flex items-center justify-center flex-shrink-0">
                   <i className="fas fa-robot text-white text-sm"></i>
                 </div>
-                <div>
-                  <h2 className="font-semibold text-gray-900">
+                <div className="min-w-0 flex-1">
+                  <h2 className="font-semibold text-gray-900 text-sm sm:text-base truncate">
                     {selectedChat?.title || "StudyBuddy AI"}
                   </h2>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                    <span className="text-sm text-gray-500">Online & Ready to Help</span>
+                  <div className="flex items-center space-x-1 sm:space-x-2">
+                    <div className="w-2 h-2 bg-green-400 rounded-full flex-shrink-0"></div>
+                    <span className="text-xs sm:text-sm text-gray-500 truncate">Online & Ready to Help</span>
                   </div>
                 </div>
               </div>
             </div>
-            
+
             {selectedChat && (
-              <div className="flex items-center space-x-2">
-                <button 
-                  className="p-2 rounded-lg hover:bg-gray-100 text-gray-600" 
+              <div className="flex items-center space-x-2 flex-shrink-0 ml-2">
+                <button
+                  className="p-2 rounded-lg hover:bg-gray-100 active:bg-gray-200 text-gray-600 touch-manipulation"
                   title="Clear Chat"
+                  aria-label="Delete chat"
                   onClick={() => {
                     if (confirm("Are you sure you want to delete this chat?")) {
                       // TODO: Implement delete chat
                     }
                   }}
                 >
-                  <i className="fas fa-trash-alt"></i>
+                  <i className="fas fa-trash-alt text-sm"></i>
                 </button>
               </div>
             )}
